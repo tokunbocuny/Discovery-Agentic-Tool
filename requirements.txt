@@ -1,0 +1,29 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# BCC/CUNY Library Agentic Project — Python dependencies
+#
+# Install into the project virtual environment:
+#   python -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements.txt
+#
+# Python ≥ 3.10 is required (claude-agent-sdk constraint).
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Primo VE connector ────────────────────────────────────────────────────────
+requests          # HTTP calls to Primo VE and Alma Analytics APIs
+python-dotenv     # Loads .env into os.environ
+
+# ── Alma Analytics connector ──────────────────────────────────────────────────
+pandas            # DataFrame for report data
+openpyxl          # Excel export (alma_analytics_connector.py --format excel)
+
+# ── Web application (app.py) ──────────────────────────────────────────────────
+fastapi           # ASGI web framework — routes, request/response models
+uvicorn[standard] # ASGI server — run with: python app.py  or  uvicorn app:app
+jinja2            # HTML template rendering (templates/search.html)
+
+# ── Claude Agent SDK ──────────────────────────────────────────────────────────
+# Requires Python ≥ 3.10.
+# Uses existing Claude Code CLI authentication — no ANTHROPIC_API_KEY needed.
+claude-agent-sdk  # pip install claude-agent-sdk
+anyio             # Async runtime used by the Agent SDK (asyncio backend)

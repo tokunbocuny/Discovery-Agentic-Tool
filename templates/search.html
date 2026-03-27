@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BCC Library OneSearch — AI Assistant</title>
+  <style>
+    /* ── CSS Variables (BCC brand palette) ─────────────────────────────── */
+    :root {
+      --bcc-navy:    #1e3c72;
+      --bcc-blue:    #2a5298;
+      --bcc-light:   #4a7bc8;
+      --bcc-bg:      #f4f6fb;
+      --bcc-white:   #ffffff;
+      --bcc-border:  #d0d9ec;
+      --bcc-text:    #1a2340;
+      --bcc-muted:   #5a6880;
+      --bcc-success: #1a7f4b;
+      --bcc-error:   #c0392b;
+      --bcc-tag-bg:  #e8edf8;
+      --radius:      8px;
+      --shadow:      0 2px 12px rgba(30,60,114,0.10);
+      --shadow-lg:   0 6px 24px rgba(30,60,114,0.14);
+    }
+
+    /* ── Reset & base ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bcc-bg);
+      color: var(--bcc-text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, var(--bcc-navy) 0%, var(--bcc-blue) 100%);
+      color: #fff;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: var(--shadow-lg);
+    }
+    .header-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 1.35rem; font-weight: 700; line-height: 1.2; }
+    header p  { font-size: 0.82rem; opacity: 0.78; margin-top: 2px; }
+    .header-badge {
+      margin-left: auto;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    /* ── Main layout ────────────────────────────────────────────────────── */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    /* ── Search card ────────────────────────────────────────────────────── */
+    .search-card {
+      background: var(--bcc-white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 28px 24px;
+      margin-bottom: 24px;
+    }
+    .search-card label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      color: var(--bcc-navy);
+    }
+    .search-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+    #query {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid var(--bcc-border);
+      border-radius: var(--radius);
+      font-size: 1rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    #query:focus { border-color: var(--bcc-blue); }
+    #query::placeholder { color: #aab2c4; }
+
+    #searchBtn {
+      padding: 12px 26px;
+      background: linear-gradient(135deg, var(--bcc-navy), var(--bcc-blue));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    #searchBtn:hover:not(:disabled) { opacity: 0.92; }
+    #searchBtn:active:not(:disabled) { transform: scale(0.98); }
+    #searchBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* ── Options row ────────────────────────────────────────────────────── */
+    .options-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .option-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .option-group label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--bcc-muted);
+      margin-bottom: 0;
+      white-space: nowrap;
+    }
+    .option-group select {
+      padding: 6px 10px;
+      border: 1.5px solid var(--bcc-border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: var(--bcc-white);
+      color: var(--bcc-text);
+      cursor: pointer;
+    }
+    .option-group select:focus { outline: none; border-color: var(--bcc-blue); }
+
+    /* ── Loading spinner ────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status / error banners ─────────────────────────────────────────── */
+    #status {
+      display: none;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+    #status.error {
+      display: block;
+      background: #fef0ef;
+      border: 1px solid #f5c6c2;
+      color: var(--bcc-error);
+    }
+
+    /* ── Summary box (Claude's response) ───────────────────────────────── */
+    #summary-box {
+      display: none;
+      background: linear-gradient(135deg, #eef2fb 0%, #f0f5ff 100%);
+      border: 1px solid var(--bcc-border);
+      border-left: 4px solid var(--bcc-blue);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+    #summary-box .summary-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--bcc-blue);
+      margin-bottom: 10px;
+    }
+    #summary-text {
+      font-size: 0.95rem;
+      line-height: 1.65;
+      color: var(--bcc-text);
+    }
+
+    /* ── Results header ─────────────────────────────────────────────────── */
+    #results-header {
+      display: none;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    #results-header h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--bcc-navy);
+    }
+    .result-count {
+      font-size: 0.83rem;
+      color: var(--bcc-muted);
+    }
+
+    /* ── Result cards ───────────────────────────────────────────────────── */
+    #results-list { display: flex; flex-direction: column; gap: 12px; }
+
+    /* Clickable card wrapper */
+    .result-card-link {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      border-radius: var(--radius);
+    }
+    .result-card-link:focus-visible {
+      outline: 3px solid var(--bcc-blue);
+      outline-offset: 2px;
+    }
+
+    .result-card {
+      background: var(--bcc-white);
+      border: 1px solid var(--bcc-border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.18s, border-color 0.18s, transform 0.12s;
+      position: relative;
+    }
+    .result-card-link:hover .result-card,
+    .result-card-link:focus-visible .result-card {
+      box-shadow: var(--shadow-lg);
+      border-color: var(--bcc-light);
+      transform: translateY(-1px);
+    }
+
+    /* "opens in new tab" indicator that appears on hover */
+    .result-card::after {
+      content: "";
+      display: none;
+    }
+    .result-card-link[href]:hover .result-card::before {
+      content: "Open in catalog ↗";
+      position: absolute;
+      top: 12px; right: 14px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--bcc-blue);
+      opacity: 0.75;
+      pointer-events: none;
+    }
+
+    .result-card .card-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.4;
+      padding-right: 100px; /* room for hover label */
+    }
+    /* Title stays navy — the whole card is the link now */
+    .result-card .card-title a,
+    .result-card .card-title span {
+      color: var(--bcc-navy);
+      text-decoration: none;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .meta-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.78rem;
+      color: var(--bcc-muted);
+    }
+    .meta-chip strong { color: var(--bcc-text); font-weight: 600; }
+
+    .type-badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--bcc-tag-bg);
+      color: var(--bcc-blue);
+    }
+
+    /* Footer row: left = abstract snippet (future), right = CTA */
+    .card-footer {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Primary "View in catalog" CTA button */
+    .view-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      background: linear-gradient(135deg, var(--bcc-navy), var(--bcc-blue));
+      border: none;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fff;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      transition: opacity 0.15s, transform 0.1s;
+      box-shadow: 0 1px 4px rgba(30,60,114,0.20);
+    }
+    .view-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .view-btn:active { transform: scale(0.97); }
+    .view-btn svg { flex-shrink: 0; }
+
+    /* ── Spell-correction notice ─────────────────────────────────────────── */
+    #correction-notice {
+      display: none;
+      padding: 10px 16px;
+      background: #fffbea;
+      border: 1px solid #f0d060;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      color: #7a5800;
+      margin-bottom: 14px;
+    }
+    #correction-notice strong { font-weight: 700; }
+
+    /* ── Boolean query panel ────────────────────────────────────────────── */
+    #boolean-panel {
+      display: none;
+      background: #0f1c33;
+      border: 1px solid #2a4070;
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+    .boolean-panel-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #7aa3d4;
+      margin-bottom: 10px;
+    }
+    .boolean-section-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #4e7aaa;
+      margin-bottom: 4px;
+    }
+    #boolean-query-text,
+    #primo-query-text {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+    }
+    #boolean-query-text { color: #a8d8ff; }   /* synonym expansion — blue  */
+    #primo-query-text   { color: #98e8a0; }   /* actual q= sent    — green */
+
+    /* ── Empty / no results ─────────────────────────────────────────────── */
+    .no-results {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--bcc-muted);
+      font-size: 0.95rem;
+    }
+    .no-results .icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      header { padding: 16px 18px; }
+      header h1 { font-size: 1.1rem; }
+      .header-badge { display: none; }
+      main { padding: 18px 14px 40px; }
+      .search-row { flex-direction: column; }
+      #searchBtn { justify-content: center; }
+      /* boolean panel already hidden by default on mobile */
+      /* No room for hover overlay label on mobile */
+      .result-card-link[href]:hover .result-card::before { display: none; }
+      .result-card .card-title { padding-right: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <div class="header-icon">📚</div>
+  <div>
+    <h1>BCC Library OneSearch</h1>
+    <p>AI-powered catalog search · Bronx Community College, CUNY</p>
+  </div>
+  <span class="header-badge">Claude Agent SDK</span>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Search card -->
+  <div class="search-card">
+    <label for="query">What are you researching?</label>
+    <div class="search-row">
+      <input
+        type="text"
+        id="query"
+        placeholder='e.g. "interlibrary loan trends in community colleges"'
+        autocomplete="off"
+        autocorrect="on"
+        spellcheck="true"
+        autofocus
+      />
+      <button id="searchBtn" onclick="doSearch()">
+        <span id="btnIcon">🔍</span>
+        <span id="btnLabel">Search</span>
+      </button>
+    </div>
+
+    <!-- Options -->
+    <div class="options-row">
+      <div class="option-group">
+        <label for="limit">Results</label>
+        <select id="limit">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+      <div class="option-group">
+        <label for="sort">Sort by</label>
+        <select id="sort">
+          <option value="rank" selected>Relevance</option>
+          <option value="date_d">Newest first</option>
+          <option value="date_a">Oldest first</option>
+          <option value="title">Title A–Z</option>
+          <option value="author">Author A–Z</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spell-correction notice -->
+  <div id="correction-notice"></div>
+
+  <!-- Error / status banner -->
+  <div id="status"></div>
+
+  <!-- Claude's summary -->
+  <div id="summary-box">
+    <div class="summary-label">
+      <span>✦</span> Claude's Summary
+    </div>
+    <div id="summary-text"></div>
+  </div>
+
+  <!-- Boolean query panel (always shown after a search) -->
+  <div id="boolean-panel">
+    <div class="boolean-panel-label">🔎 Search Logic</div>
+    <div class="boolean-section-label">Concept groups &amp; synonyms</div>
+    <pre id="boolean-query-text"></pre>
+    <div class="boolean-section-label" style="margin-top:12px;">Primo VE q= parameter sent</div>
+    <pre id="primo-query-text"></pre>
+  </div>
+
+  <!-- Results header (count) -->
+  <div id="results-header">
+    <h2>Results</h2>
+    <span class="result-count" id="result-count"></span>
+  </div>
+
+  <!-- Result cards -->
+  <div id="results-list"></div>
+
+</main>
+
+<script>
+  // ── Type-label map ────────────────────────────────────────────────────────
+  const TYPE_LABELS = {
+    article:              "Article",
+    book:                 "Book",
+    book_chapter:         "Book Chapter",
+    conference_proceeding: "Conference Paper",
+    dissertation:         "Dissertation",
+    journal:              "Journal",
+    newspaper_article:    "News",
+    reference_entry:      "Reference",
+    report:               "Report",
+    review:               "Review",
+    video:                "Video",
+    website:              "Website",
+  };
+
+  function typeLabel(raw) {
+    if (!raw) return "";
+    const key = raw.toLowerCase().replace(/\s+/g, "_");
+    return TYPE_LABELS[key] || raw.charAt(0).toUpperCase() + raw.slice(1);
+  }
+
+  // ── UI helpers ────────────────────────────────────────────────────────────
+  function setLoading(on) {
+    const btn   = document.getElementById("searchBtn");
+    const icon  = document.getElementById("btnIcon");
+    const label = document.getElementById("btnLabel");
+    btn.disabled = on;
+    if (on) {
+      icon.outerHTML  = '<span id="btnIcon" class="spinner"></span>';
+      label.textContent = "Searching…";
+    } else {
+      document.getElementById("btnIcon").outerHTML = '<span id="btnIcon">🔍</span>';
+      label.textContent = "Search";
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById("status");
+    el.textContent = "⚠️  " + msg;
+    el.className = "error";
+  }
+
+  function clearError() {
+    const el = document.getElementById("status");
+    el.style.display = "none";
+    el.className = "";
+    el.textContent = "";
+  }
+
+  function showCorrectionNotice(data) {
+    const el = document.getElementById("correction-notice");
+    if (data.corrected_query) {
+      el.innerHTML = `✏️ Spelling corrected: searched for <strong>"${escHtml(data.corrected_query)}"</strong> instead.`;
+      el.style.display = "block";
+    } else {
+      el.style.display = "none";
+    }
+  }
+
+  // ── Markdown → HTML (lightweight, no external library) ───────────────────
+  function markdownToHtml(md) {
+    if (!md) return "";
+    return md
+      // Escape HTML first so we don't double-process
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      // Bold: **text** or __text__
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/__(.+?)__/g, "<strong>$1</strong>")
+      // Italic: *text* or _text_
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/_(.+?)_/g, "<em>$1</em>")
+      // Inline code: `code`
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      // Unordered list items: lines starting with - or *
+      .replace(/^[\-\*] (.+)$/gm, "<li>$1</li>")
+      .replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>")
+      // Line breaks: blank line → paragraph break
+      .replace(/\n\n+/g, "</p><p>")
+      // Single newlines → <br>
+      .replace(/\n/g, "<br>")
+      // Wrap in paragraph
+      .replace(/^/, "<p>").replace(/$/, "</p>")
+      // Clean up empty paragraphs
+      .replace(/<p>\s*<\/p>/g, "");
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function renderResults(data) {
+    // Spell-correction notice
+    showCorrectionNotice(data);
+
+    // Summary (markdown → HTML)
+    const summaryBox  = document.getElementById("summary-box");
+    const summaryText = document.getElementById("summary-text");
+    if (data.summary) {
+      summaryText.innerHTML = markdownToHtml(data.summary);
+      summaryBox.style.display = "block";
+    } else {
+      summaryBox.style.display = "none";
+    }
+
+    // Boolean query panel — always show when we have a query string
+    const boolPanel  = document.getElementById("boolean-panel");
+    const boolText   = document.getElementById("boolean-query-text");
+    const primoText  = document.getElementById("primo-query-text");
+    if (data.boolean_string || data.primo_query) {
+      boolText.textContent  = data.boolean_string || "";
+      primoText.textContent = data.primo_query    || "";
+      boolPanel.style.display = "block";
+    } else {
+      boolPanel.style.display = "none";
+    }
+
+    // Results header
+    const header = document.getElementById("results-header");
+    header.style.display = "flex";
+    document.getElementById("result-count").textContent =
+      `${data.total.toLocaleString()} total catalog matches · showing ${data.results.length}`;
+
+    // Cards
+    const list = document.getElementById("results-list");
+    list.innerHTML = "";
+
+    if (!data.results || data.results.length === 0) {
+      list.innerHTML = `
+        <div class="no-results">
+          <div class="icon">🔍</div>
+          <div>No records found. Try broadening your search.</div>
+        </div>`;
+      return;
+    }
+
+    // SVG external-link icon (used in CTA button)
+    const extIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        aria-hidden="true">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>`;
+
+    data.results.forEach((rec) => {
+      const hasLink = Boolean(rec.link);
+      const safeLink = hasLink ? escHtml(rec.link) : "#";
+
+      const typeBadge = rec.type
+        ? `<span class="type-badge">${escHtml(typeLabel(rec.type))}</span>`
+        : "";
+
+      const footerHtml = hasLink
+        ? `<div class="card-footer">
+             <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="view-btn"
+                tabindex="-1" aria-hidden="true">
+               View in catalog ${extIcon}
+             </a>
+           </div>`
+        : "";
+
+      // Inner card content
+      const cardHtml = `
+        <div class="card-title"><span>${escHtml(rec.title)}</span></div>
+        <div class="card-meta">
+          ${rec.creator ? `<span class="meta-chip">👤 <strong>${escHtml(rec.creator)}</strong></span>` : ""}
+          ${rec.date    ? `<span class="meta-chip">📅 <strong>${escHtml(rec.date)}</strong></span>`    : ""}
+          ${rec.source  ? `<span class="meta-chip">🗄 ${escHtml(rec.source)}</span>`                   : ""}
+          ${typeBadge}
+        </div>
+        ${footerHtml}
+      `;
+
+      if (hasLink) {
+        // Whole card is a link
+        const wrapper = document.createElement("a");
+        wrapper.className = "result-card-link";
+        wrapper.href = rec.link;
+        wrapper.target = "_blank";
+        wrapper.rel = "noopener noreferrer";
+        wrapper.setAttribute("aria-label", `${rec.title} — open in catalog`);
+        const card = document.createElement("div");
+        card.className = "result-card";
+        card.innerHTML = cardHtml;
+        wrapper.appendChild(card);
+        list.appendChild(wrapper);
+      } else {
+        // No link — plain div
+        const card = document.createElement("div");
+        card.className = "result-card";
+        card.innerHTML = cardHtml;
+        list.appendChild(card);
+      }
+    });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // ── Main search handler ───────────────────────────────────────────────────
+  async function doSearch() {
+    const query = document.getElementById("query").value.trim();
+    if (!query) {
+      document.getElementById("query").focus();
+      return;
+    }
+
+    clearError();
+    document.getElementById("correction-notice").style.display = "none";
+    document.getElementById("summary-box").style.display        = "none";
+    document.getElementById("boolean-panel").style.display      = "none";
+    document.getElementById("results-header").style.display     = "none";
+    document.getElementById("results-list").innerHTML            = "";
+    setLoading(true);
+
+    const payload = {
+      query,
+      limit: parseInt(document.getElementById("limit").value, 10),
+      sort:  document.getElementById("sort").value,
+    };
+
+    try {
+      const res = await fetch("/search", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        showError(err.detail || `Server error ${res.status}`);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.error) {
+        showError(data.error);
+        // Still render whatever partial results we have
+        if (data.results?.length > 0) renderResults(data);
+        return;
+      }
+
+      renderResults(data);
+
+    } catch (err) {
+      showError("Could not reach the server. Is it running?");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Enter key to search ───────────────────────────────────────────────────
+  document.getElementById("query").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") doSearch();
+  });
+</script>
+</body>
+</html>

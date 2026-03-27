@@ -1,0 +1,102 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# primo_search.yml
+# GitHub Actions Workflow — BCC / CUNY OneSearch Primo VE API Connector
+#
+# HOW TO USE:
+#   1. Add your API key to GitHub Secrets:
+#      Repository → Settings → Secrets and variables → Actions → New secret
+#      Secret name : PRIMO_API_KEY
+#      Secret value: your actual key from developers.exlibrisgroup.com
+#
+#   2. Run manually:
+#      Repository → Actions → "Primo VE Search" → Run workflow
+#      Enter your search phrase and hit Run.
+#
+#   3. Download results:
+#      After the run completes, click the run → Artifacts → results.json
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: Primo VE Search
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+on:
+
+  # Manual trigger with custom inputs
+  workflow_dispatch:
+    inputs:
+      phrase:
+        description: "Natural language search phrase"
+        required: true
+        default: "interlibrary loan trends in discovery systems at community colleges"
+      limit:
+        description: "Number of results to return (1–50)"
+        required: false
+        default: "10"
+      sort:
+        description: "Sort order: rank | date_d | date_a | title | author"
+        required: false
+        default: "rank"
+
+  # Optional: run on a schedule (uncomment to enable)
+  # schedule:
+  #   - cron: "0 9 * * 1"   # Every Monday at 9 AM UTC
+
+# ── Job ───────────────────────────────────────────────────────────────────────
+jobs:
+  search:
+    name: Run Primo VE Search
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # 1. Check out the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Cache pip dependencies for faster runs
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-primo
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4. Install dependencies
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      # 5. Run the search — API key injected from GitHub Secrets (never exposed)
+      - name: Run Primo connector
+        env:
+          PRIMO_API_KEY: ${{ secrets.PRIMO_API_KEY }}
+          PRIMO_VID:     ${{ vars.PRIMO_VID     || '01CUNY_BX' }}
+          PRIMO_SCOPE:   ${{ vars.PRIMO_SCOPE   || 'MyInst_and_CI' }}
+          PRIMO_TAB:     ${{ vars.PRIMO_TAB     || 'Everything' }}
+        run: |
+          python - <<'EOF'
+          import os, sys
+          # Patch the phrase and limit from workflow inputs at runtime
+          phrase = "${{ github.event.inputs.phrase }}"
+          limit  = int("${{ github.event.inputs.limit }}" or 10)
+          sort   = "${{ github.event.inputs.sort }}" or "rank"
+
+          from primo_connector import search_from_phrase, save_results
+
+          response = search_from_phrase(phrase, limit=limit, sort=sort)
+          save_results(response, "results.json")
+          EOF
+
+      # 6. Upload results.json as a downloadable artifact
+      - name: Upload search results
+        uses: actions/upload-artifact@v4
+        with:
+          name: primo-search-results
+          path: results.json
+          retention-days: 30
