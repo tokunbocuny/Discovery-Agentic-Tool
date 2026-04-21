@@ -3,13 +3,31 @@
 Student Email Address Update
 BCC/CUNY Library — Tokunbo Adeshina Jr.
 
-Syncs preferred email addresses from Alma to ILLiad for all patrons
-that exist in both systems (active and expired).
-Runs on a schedule. Failed records are logged for manual review.
+Workflow:
+  1. Read all patron usernames from an ILLiad user export CSV
+  2. For each patron, look up their account in Alma
+  3. Retrieve the preferred email from Alma contact info
+  4. Write all original columns + a new 'Alma Email' column to an output CSV
+
+The output CSV can then be used to bulk import updated email addresses into ILLiad.
+
+Usage:
+  python3 email_sync.py                        # uses default illiad_users.csv
+  python3 email_sync.py my_export.csv          # uses a custom export file
+
+Output:
+  output/email_update_<timestamp>.csv          # updated records
+  logs/failed_updates_<timestamp>.csv          # patrons with no Alma email found
+  logs/sync_<timestamp>.log                    # full run log
+
+ILLiad Export Instructions:
+  ILLiad Staff Client → Reports → User Reports → Export Users → Save as CSV
+  The CSV must contain a column named 'Username' or 'User Name'.
 """
 
 import os
 import csv
+import sys
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
@@ -19,18 +37,21 @@ load_dotenv()
 
 ALMA_API_KEY  = os.getenv("ALMA_API_KEY")
 ALMA_BASE_URL = os.getenv("ALMA_BASE_URL", "").rstrip("/")
-ILLIAD_API_KEY  = os.getenv("ILLIAD_API_KEY")
-ILLIAD_BASE_URL = os.getenv("ILLIAD_BASE_URL", "").rstrip("/")
+
+SCRIPT_DIR = os.path.dirname(__file__)
 
 # ---------------------------------------------------------------------------
 # Logging setup
 # ---------------------------------------------------------------------------
-LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
+LOG_DIR    = os.path.join(SCRIPT_DIR, "logs")
+OUTPUT_DIR = os.path.join(SCRIPT_DIR, "output")
 os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-timestamp    = datetime.now().strftime("%Y%m%d_%H%M%S")
-run_log      = os.path.join(LOG_DIR, f"sync_{timestamp}.log")
-failed_csv   = os.path.join(LOG_DIR, f"failed_updates_{timestamp}.csv")
+timestamp   = datetime.now().strftime("%Y%m%d_%H%M%S")
+run_log     = os.path.join(LOG_DIR, f"sync_{timestamp}.log")
+failed_csv  = os.path.join(LOG_DIR, f"failed_updates_{timestamp}.csv")
+output_csv  = os.path.join(OUTPUT_DIR, f"email_update_{timestamp}.csv")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,56 +64,61 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# ILLiad CSV reader
+# ---------------------------------------------------------------------------
+def load_illiad_export(filepath):
+    """
+    Read all rows from an ILLiad CSV export.
+    Detects 'Username' or 'User Name' column automatically.
+    Returns (fieldnames, rows, username_col).
+    """
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(
+            f"ILLiad export file not found: {filepath}\n"
+            "Export from ILLiad Staff Client → Reports → User Reports → Export Users"
+        )
+
+    with open(filepath, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
+
+        username_col = None
+        for col in fieldnames:
+            if col.replace(" ", "").lower() == "username":
+                username_col = col
+                break
+
+        if not username_col:
+            raise ValueError(
+                f"CSV is missing a 'Username' column. Found: {fieldnames}"
+            )
+
+        rows = list(reader)
+
+    log.info(f"Loaded {len(rows)} patron(s) from: {filepath}")
+    return fieldnames, rows, username_col
+
+
+# ---------------------------------------------------------------------------
 # Alma helpers
 # ---------------------------------------------------------------------------
 ALMA_HEADERS = {
     "Authorization": f"apikey {ALMA_API_KEY}",
-    "Accept": "application/json",
+    "Accept":        "application/json",
 }
-
-def get_all_alma_user_ids():
-    """Fetch all Alma user primary IDs with pagination (active + expired)."""
-    url    = f"{ALMA_BASE_URL}/almaws/v1/users"
-    limit  = 100
-    offset = 0
-    ids    = []
-
-    while True:
-        resp = requests.get(
-            url,
-            headers=ALMA_HEADERS,
-            params={"limit": limit, "offset": offset},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        data  = resp.json()
-        users = data.get("user", [])
-
-        if not users:
-            break
-
-        for u in users:
-            primary_id = u.get("primary_id")
-            if primary_id:
-                ids.append(primary_id)
-
-        total   = int(data.get("total_record_count", 0))
-        offset += limit
-        log.info(f"Alma users fetched so far: {min(offset, total)} / {total}")
-
-        if offset >= total:
-            break
-
-    log.info(f"Total Alma users retrieved: {len(ids)}")
-    return ids
-
 
 def get_alma_preferred_email(user_id):
     """
-    Return the preferred email address for an Alma user, or None if not found.
+    Look up an Alma user by ID and return their preferred email, or None.
+    Returns None silently on 404 (user not in Alma).
     """
     url  = f"{ALMA_BASE_URL}/almaws/v1/users/{user_id}"
     resp = requests.get(url, headers=ALMA_HEADERS, timeout=30)
+
+    # 404 = not in Alma, 400 = ID not recognised by Alma — skip both gracefully
+    if resp.status_code in (400, 404):
+        return None
+
     resp.raise_for_status()
 
     emails = resp.json().get("contact_info", {}).get("email", [])
@@ -103,99 +129,83 @@ def get_alma_preferred_email(user_id):
 
 
 # ---------------------------------------------------------------------------
-# ILLiad helpers
-# ---------------------------------------------------------------------------
-ILLIAD_HEADERS = {
-    "ApiKey":       ILLIAD_API_KEY,
-    "Accept":       "application/json",
-    "Content-Type": "application/json",
-}
-
-def illiad_user_exists(user_id):
-    """Return True if the patron exists in ILLiad."""
-    url  = f"{ILLIAD_BASE_URL}/Users/{user_id}"
-    resp = requests.get(url, headers=ILLIAD_HEADERS, timeout=30)
-    return resp.status_code == 200
-
-
-def update_illiad_email(user_id, email):
-    """Patch the EMailAddress field for an ILLiad patron."""
-    url  = f"{ILLIAD_BASE_URL}/Users/{user_id}"
-    resp = requests.patch(
-        url,
-        headers=ILLIAD_HEADERS,
-        json={"EMailAddress": email},
-        timeout=30,
-    )
-    resp.raise_for_status()
-
-
-# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main():
+    export_file = sys.argv[1] if len(sys.argv) > 1 else os.path.join(SCRIPT_DIR, "illiad_users.csv")
+
     log.info("=" * 60)
     log.info("Student Email Address Sync — START")
+    log.info(f"ILLiad export file : {export_file}")
+    log.info(f"Output file        : {output_csv}")
     log.info("=" * 60)
 
-    failed_records = []
-    success_count  = 0
-    skip_count     = 0
+    failed_records  = []
+    success_count   = 0
+    skip_count      = 0
 
-    # Step 1 — Retrieve all Alma user IDs
+    # Step 1 — Load ILLiad export
     try:
-        alma_ids = get_all_alma_user_ids()
-    except Exception as exc:
-        log.critical(f"Failed to retrieve Alma user list: {exc}")
+        fieldnames, rows, username_col = load_illiad_export(export_file)
+    except (FileNotFoundError, ValueError) as exc:
+        log.critical(str(exc))
         raise SystemExit(1)
 
-    # Step 2 — Process each user
-    for user_id in alma_ids:
+    # Step 2 — Look up each patron in Alma and enrich with email
+    output_fieldnames = fieldnames + ["Alma Email"]
+    output_rows = []
+
+    for row in rows:
+        username = row.get(username_col, "").strip()
+        if not username:
+            continue
+
         try:
-            # Skip patrons not found in ILLiad
-            if not illiad_user_exists(user_id):
-                log.debug(f"Not in ILLiad, skipping: {user_id}")
+            email = get_alma_preferred_email(username)
+
+            if email is None:
+                log.debug(f"No Alma account or no preferred email for: {username}")
+                row["Alma Email"] = ""
                 skip_count += 1
-                continue
-
-            # Get preferred email from Alma
-            email = get_alma_preferred_email(user_id)
-            if not email:
-                log.warning(f"No preferred email in Alma for: {user_id}")
-                failed_records.append({
-                    "user_id": user_id,
-                    "reason":  "No preferred email found in Alma",
-                })
-                continue
-
-            # Update ILLiad
-            update_illiad_email(user_id, email)
-            log.info(f"Updated  {user_id}  →  {email}")
-            success_count += 1
+            else:
+                row["Alma Email"] = email
+                log.info(f"Found  {username}  →  {email}")
+                success_count += 1
 
         except requests.HTTPError as exc:
-            log.error(f"HTTP error for {user_id}: {exc}")
-            failed_records.append({"user_id": user_id, "reason": str(exc)})
+            log.error(f"HTTP error for {username}: {exc}")
+            row["Alma Email"] = ""
+            failed_records.append({"username": username, "reason": str(exc)})
 
         except Exception as exc:
-            log.error(f"Unexpected error for {user_id}: {exc}")
-            failed_records.append({"user_id": user_id, "reason": str(exc)})
+            log.error(f"Unexpected error for {username}: {exc}")
+            row["Alma Email"] = ""
+            failed_records.append({"username": username, "reason": str(exc)})
 
-    # Step 3 — Write failed records to CSV for manual review
+        output_rows.append(row)
+
+    # Step 3 — Write enriched output CSV
+    with open(output_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=output_fieldnames)
+        writer.writeheader()
+        writer.writerows(output_rows)
+    log.info(f"Output written to: {output_csv}")
+
+    # Step 4 — Write failed records log
     if failed_records:
         with open(failed_csv, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=["user_id", "reason"])
+            writer = csv.DictWriter(f, fieldnames=["username", "reason"])
             writer.writeheader()
             writer.writerows(failed_records)
         log.warning(f"{len(failed_records)} failed record(s) written to: {failed_csv}")
 
-    # Step 4 — Summary
+    # Step 5 — Summary
     log.info("=" * 60)
     log.info(
         f"Sync complete — "
-        f"Updated: {success_count} | "
+        f"Emails found: {success_count} | "
         f"Failed: {len(failed_records)} | "
-        f"Skipped (not in ILLiad): {skip_count}"
+        f"Not in Alma: {skip_count}"
     )
     log.info("=" * 60)
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Connection Test — Student Email Address Update
-Tests Alma and ILLiad API connectivity before running the full sync.
-Fetches one Alma user, retrieves their preferred email, and checks
-if they exist in ILLiad. Does NOT write any changes.
+Tests Alma API connectivity before running the full sync.
+Fetches one Alma user and retrieves their preferred email.
+Does NOT write any changes.
 """
 
 import os
@@ -12,19 +12,12 @@ import requests
 
 load_dotenv()
 
-ALMA_API_KEY    = os.getenv("ALMA_API_KEY")
-ALMA_BASE_URL   = os.getenv("ALMA_BASE_URL", "").rstrip("/")
-ILLIAD_API_KEY  = os.getenv("ILLIAD_API_KEY")
-ILLIAD_BASE_URL = os.getenv("ILLIAD_BASE_URL", "").rstrip("/")
+ALMA_API_KEY  = os.getenv("ALMA_API_KEY")
+ALMA_BASE_URL = os.getenv("ALMA_BASE_URL", "").rstrip("/")
 
 ALMA_HEADERS = {
     "Authorization": f"apikey {ALMA_API_KEY}",
     "Accept": "application/json",
-}
-
-ILLIAD_HEADERS = {
-    "ApiKey":  ILLIAD_API_KEY,
-    "Accept":  "application/json",
 }
 
 def test_alma_connection():
@@ -55,22 +48,6 @@ def test_alma_email(user_id):
         print("No preferred email found for this user.")
     return preferred
 
-def test_illiad_connection(user_id):
-    print(f"\n--- ILLiad API — Looking up: {user_id} ---")
-    url  = f"{ILLIAD_BASE_URL}/Users/{user_id}"
-    resp = requests.get(url, headers=ILLIAD_HEADERS, timeout=30)
-    print(f"Status: {resp.status_code}")
-    if resp.status_code == 200:
-        data = resp.json()
-        print(f"Patron found in ILLiad.")
-        print(f"ILLiad current email: {data.get('EMailAddress', 'N/A')}")
-        return True
-    elif resp.status_code == 404:
-        print("Patron not found in ILLiad (may not exist there).")
-        return False
-    else:
-        resp.raise_for_status()
-
 def main():
     print("=" * 50)
     print("Connection Test — Student Email Address Sync")
@@ -89,14 +66,8 @@ def main():
         print(f"\nAlma email lookup FAILED: {exc}")
         return
 
-    try:
-        test_illiad_connection(user_id)
-    except Exception as exc:
-        print(f"\nILLiad connection FAILED: {exc}")
-        return
-
     print("\n" + "=" * 50)
-    print("All connection tests passed. Ready to run email_sync.py.")
+    print("Alma connection test passed. Ready to run email_sync.py.")
     print("=" * 50)
 
 if __name__ == "__main__":
