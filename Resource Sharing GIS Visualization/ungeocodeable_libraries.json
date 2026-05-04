@@ -1,0 +1,623 @@
+[
+  {
+    "name": "BUFFALO & ERIE CNTY PUBLIC LIBRARY",
+    "layer": "Who We Borrow From",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CENTRAL NEW MEXICO COMMUNITY COLLEGE",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY BARUCH COLLEGE",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY BROOKLYN COLLEGE",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY CITY COLLEGE",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY LAGUARDIA COMMUNITY COLLEGE",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY LEHMAN COLLEGE",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "FINGER LAKES LIBRARY SYSTEM",
+    "layer": "Who We Borrow From",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY HUNTER COLLEGE",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "ONONDAGA CNTY PUBLIC LIBRARY",
+    "layer": "Who We Borrow From",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "PRINCE GEORGES COUNTY MEMORIAL LIBRARY SYSTEM",
+    "layer": "Who We Borrow From",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUNY AT ALBANY LIBRS",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUNY AT BUFFALO",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUNY AT STONY BROOK",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SYRACUSE UNIVIVERSITY COLLEGE OF LAW",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "UNIVERSITY OF ARKANSAS MULLINS",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "VAUGHN COLLEGE OF AERONAUTICS & TECHNOLOGY",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "WESTCHESTER LIBRARY SYSTEM",
+    "layer": "Who We Borrow From",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "ST. JOHN'S UNIVERSITY LIBRARY NETWORK",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY KINGSBOROUGH COMMUNITY COLLEGE",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "DAEMEN UNIVERSITY",
+    "layer": "Who We Borrow From",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "BARD HIGH SCH EARLY COLLEGE - QUEENS",
+    "layer": "Who We Lend To",
+    "type": "Schools Below College Level",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "NASJONALBIBLIOTEKET, AVDELING OSLO",
+    "layer": "Who We Lend To",
+    "type": "State Library",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUNY COLLEGE OF ENVIRON SCI & FORESTRY",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "LAS VEGAS CLARK COUNTY LIBRARY DISTRIST",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "NIOGA LIBRARY SYSTEM",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUNY COLLEGE AT OSWEGO",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "MID-YORK LIBRARY SYSTEM",
+    "layer": "Who We Lend To",
+    "type": "Other",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUFFOLK COOP LIBRARY SYSTEM",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "JEFFERSON PARISH EASTBANK REGIONAL LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "NEW CASTLE COUNTY PUBLIC LIBRARY SYSTEM",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "NORTH COUNTRY LIBRARY SYSTEM",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "PACE UNIVERSITY LAW LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Law Library",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "FAIRLEIGH DICKINSON UNIVERSITY METROP CAM",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "UNIVERSITY OF NORTHWESTERN-ST PAUL",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "PRINCE GEORGES CNTY MEMORIAL LIBRARY SYSTEM",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "ST. JOHNS UNIVERSITY LIBRARY NETWORK",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY NEW YORK CITY COLLEGE OF TECHNOLOGY",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "MID-HUDSON LIBRARY SYSTEM",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SOMERSET CNTY LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "HOLY TRINITY ORTHODOX SEMINARY",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUNY AT STONY BROOK, HEALTH SCI LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Medical",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "TOURO COLLEGE LAW",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY LEHMAN COLLEGELEGE LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUNY BROOME COMMUNITY COLLEGE",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "NEW YORK CITY LAW DEPARTMENT",
+    "layer": "Who We Lend To",
+    "type": "Law Library",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "VIGO CNTY PUB LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "RIDER UNIVERSITY LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "UNITED STATES MILITARY ACADEMY AT WEST POINT",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CHAPMAN UNIVERSITY SCH OF LAW",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "CUNY HOSTOS COMMUNITY COLLEGE",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "HOFSTRA UNIVERSITY LAW SCH LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "UNIVERSITY OF PENNSYLVANIA BIDDLE LAW LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Law Library",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "UNIVERSITY OF HAWAII AT HILO",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "US EPA HEADQUARTERS AND CHEMICAL LIBRARIES",
+    "layer": "Who We Lend To",
+    "type": "Federal/Natl Government",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "PAUL SMITHS COLLEGE LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "WILMETTE PUBLIC LIBRARY DISTRICT",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "MOUNT MARTY UNIVERSITY LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SUNY HEALTH SCI CTR AT BROOKLYN",
+    "layer": "Who We Lend To",
+    "type": "Medical",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "DOMINICAN UNIVERSITY NEW YORK",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "YUMA COUNTY LIBRARY DISTRICT",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "XENIA COMMUNITY LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Public",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "QUINNIPIAC UNIVERSITY SCHOOL OF LAW",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "UNIVERSITY OF ROCHESTER MEDICAL CENTER",
+    "layer": "Who We Lend To",
+    "type": "Medical",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "STATE LIBRARY OF NORTH CAROLINA",
+    "layer": "Who We Lend To",
+    "type": "State Library",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "SAINT MARYS COLLEGE OF MARYLAND",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "ROYAL DANISH LIBRARY",
+    "layer": "Who We Lend To",
+    "type": "Federal/Natl Government",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "UCNJ UNION COLLEGE OF UNION COUNTY, NJ",
+    "layer": "Who We Lend To",
+    "type": "Academic",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  },
+  {
+    "name": "IBM TJ WATSON RESEARCH CENTER",
+    "layer": "Who We Lend To",
+    "type": "Corporate",
+    "address": "",
+    "lat": null,
+    "lng": null,
+    "notes": "Could not be geocoded \u2014 needs manual address lookup"
+  }
+]

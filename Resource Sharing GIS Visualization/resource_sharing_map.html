@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapping the Collaborative Power of Resource Sharing at BCC</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #58a6ff;
+      letter-spacing: 0.5px;
+    }
+
+    header span {
+      font-size: 0.78rem;
+      color: #8b949e;
+    }
+
+    #map-container {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Info panel */
+    #info-panel {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 1000;
+      background: rgba(22, 27, 34, 0.92);
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 14px 18px;
+      min-width: 240px;
+      backdrop-filter: blur(6px);
+    }
+
+    #info-panel h2 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8b949e;
+      margin-bottom: 8px;
+    }
+
+    #current-location {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 4px;
+    }
+
+    #current-type {
+      font-size: 0.78rem;
+      color: #58a6ff;
+      margin-bottom: 10px;
+    }
+
+    #progress-bar-wrap {
+      background: #21262d;
+      border-radius: 4px;
+      height: 4px;
+      overflow: hidden;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #58a6ff, #3fb950);
+      border-radius: 4px;
+      transition: width 0.1s linear;
+    }
+
+    #step-counter {
+      font-size: 0.72rem;
+      color: #8b949e;
+      margin-top: 6px;
+    }
+
+    /* Controls */
+    #controls {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      gap: 10px;
+    }
+
+    .ctrl-btn {
+      background: rgba(22, 27, 34, 0.92);
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      backdrop-filter: blur(6px);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .ctrl-btn:hover { background: #21262d; border-color: #58a6ff; }
+    .ctrl-btn.active { background: #1f6feb; border-color: #58a6ff; color: #fff; }
+
+    /* Pulse ring animation on active marker */
+    @keyframes pulse-ring {
+      0%   { transform: scale(1);   opacity: 0.8; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+
+    .pulse-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--marker-color, #58a6ff);
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 0 rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .pulse-icon::after {
+      content: '';
+      position: absolute;
+      top: -4px; left: -4px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--marker-color-ring, rgba(88,166,255,0.35));
+      animation: pulse-ring 1.4s ease-out infinite;
+    }
+
+    /* Legend */
+    #legend {
+      position: absolute;
+      bottom: 70px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(22, 27, 34, 0.92);
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 12px 16px;
+      backdrop-filter: blur(6px);
+      font-size: 0.78rem;
+    }
+
+    #legend h3 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8b949e;
+      margin-bottom: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+      color: #e6edf3;
+    }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📍 Mapping the Collaborative Power of Resource Sharing at BCC</h1>
+  <span>Bronx Community College — CUNY Library · 621 Partner Institutions</span>
+</header>
+
+<div id="map-container">
+  <div id="map"></div>
+
+  <div id="info-panel">
+    <h2>Current Location</h2>
+    <div id="current-location">—</div>
+    <div id="current-type">—</div>
+    <div id="progress-bar-wrap">
+      <div id="progress-bar" style="width:0%"></div>
+    </div>
+    <div id="step-counter">Stop 1 of 1</div>
+  </div>
+
+  <div id="legend">
+    <h3>Legend</h3>
+    <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Active Stop</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f78166"></div> Academic (462)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div> Public (105)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffa657"></div> Corporate (10)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d2a8ff"></div> Major Academic Research (8)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e3b341"></div> Federal/Govt (12)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#79c0ff"></div> State Library (8)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#56d364"></div> Law Library (5)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff7b72"></div> Medical (3)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#bc8cff"></div> Schools (5)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a5d6ff"></div> Assoc/Foundation (1)</div>
+  </div>
+
+  <div id="controls">
+    <button class="ctrl-btn" id="btn-prev">&#9664; Prev</button>
+    <button class="ctrl-btn active" id="btn-play">⏸ Pause</button>
+    <button class="ctrl-btn" id="btn-next">Next &#9654;</button>
+  </div>
+</div>
+
+<script>
+  // Color map by library type
+  const TYPE_COLORS = {
+    "Academic":                     "#f78166",
+    "Public":                       "#3fb950",
+    "Corporate":                    "#ffa657",
+    "Major Academic Research":      "#d2a8ff",
+    "Federal/Natl Government":      "#e3b341",
+    "State Library":                "#79c0ff",
+    "Law Library":                  "#56d364",
+    "Medical":                      "#ff7b72",
+    "Schools Below College Level":  "#bc8cff",
+    "Association/Foundation":       "#a5d6ff",
+    "State or Municipal Governments": "#e3b341"
+  };
+
+  const locations = [
+    { name: 'UNIVERSITY OF HAWAII AT HILO', type: 'Academic', address: '200 W Kawili St, Hilo, HI', layer: 'Who We Lend To', lat: 19.6999872, lng: -155.0845188 },
+    { name: 'UNIVERSITY OF HAWAII AT MANOA', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 21.2982795, lng: -157.8186932 },
+    { name: 'UNIVERSITY OF HAWAII AT MANOA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 21.2982795, lng: -157.8186932 },
+    { name: 'FAIRBANKS N STAR BOROUGH LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 64.8569209, lng: -147.8200817 },
+    { name: 'WESTERN WASHINGTON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 48.734141, lng: -122.4874638 },
+    { name: 'SPOKANE FALLS COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 47.67643, lng: -117.4639762 },
+    { name: 'SEATTLE PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 47.6067142, lng: -122.3326983 },
+    { name: 'UNIVERSITY OF PUGET SOUND LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 47.261437, lng: -122.4809573 },
+    { name: 'PIERCE COUNTY LIBRARY SYSTEM', type: 'Public', address: '', layer: 'Who We Lend To', lat: 47.1555576, lng: -122.3870175 },
+    { name: 'SAINT MARTIN\'S UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 47.0424183, lng: -122.817092 },
+    { name: 'CENTRAL WASHINGTON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 47.006469, lng: -120.5367304 },
+    { name: 'UNIVERSITY OF MONTANA, MANSFIELD LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 46.8541841, lng: -113.9655283 },
+    { name: 'LEWIS & CLARK COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 46.4108402, lng: -117.0268096 },
+    { name: 'LEWIS & CLARK COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 46.4108402, lng: -117.0268096 },
+    { name: 'UNIVERSITY OF PORTLAND', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 45.5736806, lng: -122.7282878 },
+    { name: 'CEDAR MILL LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 45.5273986, lng: -122.8060358 },
+    { name: 'WASHINGTON HOSP CTR', type: 'Corporate', address: '', layer: 'Who We Lend To', lat: 45.5193878, lng: -122.9781992 },
+    { name: 'ALBANY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 44.6282235, lng: -123.07554 },
+    { name: 'UNIVERSITY OF OREGON LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.0443422, lng: -123.0776259 },
+    { name: 'NORTHWEST NAZARENE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.5610104, lng: -116.565824 },
+    { name: 'CAL POLY HUMBOLDT', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8764763, lng: -124.0800564 },
+    { name: 'CALIFORNIA STATE UNIVERSITY-SACRAMENTO LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.5626837, lng: -121.42412 },
+    { name: 'SANTA ROSA JUNIOR COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 38.4546363, lng: -122.7216065 },
+    { name: 'SANTA ROSA JR COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.4546363, lng: -122.7216065 },
+    { name: 'TOURO UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 38.0876215, lng: -122.264123 },
+    { name: 'TOURO UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.0876215, lng: -122.264123 },
+    { name: 'UNIVERSITY OF THE PACIFIC', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.9804237, lng: -121.3128472 },
+    { name: 'UNIVERSITY OF CALIFORNIA BERKELEY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.8754996, lng: -122.2390685 },
+    { name: 'SAN FRANCISCO PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 37.7818571, lng: -122.4681151 },
+    { name: 'UNIVERSITY OF CALIFORNIA SAN FRANCISCO', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.7627257, lng: -122.4582568 },
+    { name: 'SAN FRANCISCO STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.7245167, lng: -122.4799957 },
+    { name: 'CALIFORNIA STATE UNIVERSITY - E BAY LIBR', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 37.6555236, lng: -122.0558772 },
+    { name: 'STANFORD UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.4313138, lng: -122.1693654 },
+    { name: 'STANFORD UNIVERSITY GRADUATE SCHOOL OF BUSINESS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.4279687, lng: -122.1622154 },
+    { name: 'UNIVERSITY OF CALIFORNIA, MERCED', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.365182, lng: -120.4225275 },
+    { name: 'SARATOGA BRANCH LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 37.3026251, lng: -122.0234348 },
+    { name: 'CROWN COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 36.9998905, lng: -122.0547572 },
+    { name: 'MONTEREY COUNTY FREE LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 36.6914684, lng: -121.7997241 },
+    { name: 'LAS VEGAS CLARK COUNTY LIBRARY DISTRIST', type: 'Public', address: '1401 E Flamingo Rd, Las Vegas, NV', layer: 'Who We Lend To', lat: 36.1147361, lng: -115.1343426 },
+    { name: 'UNIVERSITY OF NEVADA LAS VEGAS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.1079411, lng: -115.1439051 },
+    { name: 'COLLEGE OF SOUTHERN NEVADA', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 36.0065098, lng: -114.9675522 },
+    { name: 'UNIVERSITY OF CALIFORNIA, SANTA BARBARA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.4146025, lng: -119.84581 },
+    { name: 'OCCIDENTAL COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 34.127195, lng: -118.2099203 },
+    { name: 'OCCIDENTAL COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.127195, lng: -118.2099203 },
+    { name: 'THE CLAREMONT COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.1004832, lng: -117.7115518 },
+    { name: 'MOUNT SAINT MARYS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 34.0852201, lng: -118.4824686 },
+    { name: 'SOUTHWESTERN LAW SCH', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.0606083, lng: -118.2895821 },
+    { name: 'UNIVERSITY CLUB LIBRARY', type: 'Corporate', address: '', layer: 'Who We Lend To', lat: 34.0226346, lng: -118.2829941 },
+    { name: 'UNIVERSITY OF CALIFORNIA, LOS ANGELES', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.0198321, lng: -118.2780639 },
+    { name: 'UNIVERSITY OF CALIFORNIA, DAVIS, SHIELDS LIBRARY', type: 'Major Academic Research', address: '', layer: 'Who We Lend To', lat: 33.9820425, lng: -117.332218 },
+    { name: 'RIVERSIDE COUNTY LIBRARY SYSTEM', type: 'Public', address: '', layer: 'Who We Lend To', lat: 33.9792355, lng: -117.3734224 },
+    { name: 'UNIVERSITY OF CALIFORNIA, RIVERSIDE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.9642576, lng: -117.3398097 },
+    { name: 'TORRANCE PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 33.8156307, lng: -118.3789258 },
+    { name: 'SAN JACINTO COLLEGE, LEE DAVIS LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.8080309, lng: -116.9671525 },
+    { name: 'ORANGE COUNTY PUBLIC LIBRARY, 92705', type: 'Public', address: '', layer: 'Who We Lend To', lat: 33.7235395, lng: -117.8496053 },
+    { name: 'CHAPMAN UNIVERSITY SCH OF LAW', type: 'Academic', address: 'One University Dr, Orange, CA', layer: 'Who We Lend To', lat: 33.6575844, lng: -117.8347965 },
+    { name: 'UNIVERSITY OF CALIFORNIA, IRVINE', type: 'Major Academic Research', address: '', layer: 'Who We Lend To', lat: 33.649176, lng: -117.8407644 },
+    { name: 'CALIFORNIA STATE UNIVERSITY SAN MARCOS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 33.1295667, lng: -117.1606492 },
+    { name: 'CALIFORNIA STATE UNIVERSITY SAN MARCOS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.1295667, lng: -117.1606492 },
+    { name: 'WESTERN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.7139413, lng: -117.0372503 },
+    { name: 'YUMA COUNTY LIBRARY DISTRICT', type: 'Public', address: '2951 S 21st Dr, Yuma, AZ', layer: 'Who We Lend To', lat: 32.6731057, lng: -114.6458591 },
+    { name: 'NOGALES/SANTA CRUZ CNTY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 31.3402134, lng: -110.936081 },
+    { name: 'UNIVERSITY OF ARIZONA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.2356985, lng: -110.951744 },
+    { name: 'NEW MEEXICO STATE UNIVERSITY, ALAMOGORDO', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 32.9191517, lng: -105.9260629 },
+    { name: 'ESTRELLA MOUNTAIN COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 33.4807971, lng: -112.345724 },
+    { name: 'GRAND CANYON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.5131857, lng: -112.127183 },
+    { name: 'PRESCOTT COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.5448939, lng: -112.4774982 },
+    { name: 'CENTRAL NEW MEXICO COMMUNITY COLLEGE', type: 'Academic', address: '525 Buena Vista Dr SE, Albuquerque, NM', layer: 'Who We Borrow From', lat: 35.0758804, lng: -106.6249419 },
+    { name: 'UNIVERSITY OF NEW MEXICO', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 35.0866328, lng: -106.6202094 },
+    { name: 'UNIVERSITY OF NEW MEXICO', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.0866328, lng: -106.6202094 },
+    { name: 'SANTA FE PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 35.6886686, lng: -105.9367353 },
+    { name: 'FORT LEWIS COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.2771975, lng: -107.86763 },
+    { name: 'SOUTHERN UTAH UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.6748541, lng: -113.0731048 },
+    { name: 'COLORADO STATE UNIVERSITY PUEBLO', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.308742, lng: -104.5768455 },
+    { name: 'COLORADO COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.8480439, lng: -104.8239509 },
+    { name: 'UNIVERSITY OF DENVER UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.6652172, lng: -104.9374 },
+    { name: 'UNIVERSITY OF COLORADO AT DENVER', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.7326743, lng: -104.960632 },
+    { name: 'UNIVERSITY OF COLORADO AT BOULDER', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.0075984, lng: -105.2691008 },
+    { name: 'UNIVERSITY OF COLORADO AT BOULDER', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.0075984, lng: -105.2691008 },
+    { name: 'BRIGHAM YOUNG UNIVERSITY PROVO', type: 'Major Academic Research', address: '', layer: 'Who We Lend To', lat: 40.2554196, lng: -111.6496806 },
+    { name: 'UTAH VAL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.2794106, lng: -111.7178868 },
+    { name: 'COLORADO STATE UNIVERSITY FORT COLLINS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.5706567, lng: -105.0853995 },
+    { name: 'FLAGSTAFF CITY, COCONINO COUNTY LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.6089251, lng: -111.5011732 },
+    { name: 'UNIVERSITY OF UTAH, ECCLES HEALTH SCI LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7628137, lng: -111.8368719 },
+    { name: 'GOSHEN COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.0786148, lng: -104.19052 },
+    { name: 'IDAHO STATE UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.862567, lng: -112.4321627 },
+    { name: 'MINOT STATE UNIVERSITY, GORDON B OLSON LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 48.2491151, lng: -101.3021308 },
+    { name: 'NORTH DAKOTA STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 46.897155, lng: -96.8182654 },
+    { name: 'UNIVERSITY OF WISCONSIN, SUPERIOR', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 46.7178779, lng: -92.0884228 },
+    { name: 'THE COLLEGE OF ST SCHOLASTICA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 45.5915424, lng: -94.1959797 },
+    { name: 'ST. JOHNS UNIVERSITY, LAW LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 45.5807337, lng: -94.3922495 },
+    { name: 'GREAT RIVER REG LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 45.5570749, lng: -94.1662538 },
+    { name: 'UNIVERSITY OF NORTHWESTERN-ST PAUL', type: 'Academic', address: '3003 Snelling Ave N, Roseville, MN', layer: 'Who We Lend To', lat: 45.0303778, lng: -93.1672305 },
+    { name: 'Madison Public Library', type: 'Public', address: '', layer: 'Who We Lend To', lat: 45.0125, lng: -96.1933333 },
+    { name: 'AUGSBURG UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 44.9663802, lng: -93.2412702 },
+    { name: 'UNIVERSITY OF MINNESOTA, MINNEAPOLIS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.956789, lng: -93.2661251 },
+    { name: 'ROSEMOUNT COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.7370231, lng: -93.0780642 },
+    { name: 'SOUTH DAKOTA STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.344449, lng: -96.7982371 },
+    { name: 'WINONA STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.0469203, lng: -91.6440377 },
+    { name: 'LUTHER COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.3169528, lng: -91.7985025 },
+    { name: 'MOUNT MARTY UNIVERSITY LIBRARY', type: 'Academic', address: '1105 W 8th St, Yankton, SD', layer: 'Who We Lend To', lat: 42.8729984, lng: -97.4101811 },
+    { name: 'SIOUX CITY PUBLIC LIBRARY (IOWA NORTHWEST LIBRARY SERVICES)', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.5064453, lng: -96.4274832 },
+    { name: 'MORNINGSIDE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.4744179, lng: -96.3601166 },
+    { name: 'IOWA STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.0279608, lng: -93.6447375 },
+    { name: 'MOUNT MERCY UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.002593, lng: -91.6519689 },
+    { name: 'GRINNELL COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.7511199, lng: -92.7198486 },
+    { name: 'UNIVERSITY OF IOWA', type: 'Major Academic Research', address: '', layer: 'Who We Lend To', lat: 41.6311024, lng: -91.540752 },
+    { name: 'MIDLAND UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.4382741, lng: -96.4877201 },
+    { name: 'SIMPSON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.3662127, lng: -93.5660541 },
+    { name: 'NASJONALBIBLIOTEKET, AVDELING OSLO', type: 'State Library', address: 'Henrik Ibsens gate 110, Oslo, Norway', layer: 'Who We Lend To', lat: 59.914296, lng: 10.717362 },
+    { name: 'NEBRASKA WESLEYAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8383056, lng: -96.6479296 },
+    { name: 'UNIVERSITY OF NEBRASKA AT KEARNEY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.6989871, lng: -99.110445 },
+    { name: 'ILLINOIS VET HOME', type: 'State or Municipal Governments', address: '', layer: 'Who We Lend To', lat: 39.9551371, lng: -91.4050497 },
+    { name: 'MARSHALL PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 39.1226086, lng: -93.1963203 },
+    { name: 'OLATHE DOWNTOWN LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 38.8841162, lng: -94.8177084 },
+    { name: 'CENTRAL KANSAS LIBRARY SYSTEM', type: 'Public', address: '', layer: 'Who We Lend To', lat: 38.3657573, lng: -98.7675756 },
+    { name: 'HUTCHINSON PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 38.0632691, lng: -97.9324057 },
+    { name: 'FAIRMOUNT STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.7151, lng: -97.2974 },
+    { name: 'NORTH ARKANSAS COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 36.2212818, lng: -93.0896331 },
+    { name: 'TULSA COMMUNITY COLLEGELEGEEGE LIBRARYARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.1946011, lng: -95.9374648 },
+    { name: 'UNIVERSITY OF ARKANSAS MULLINS', type: 'Academic', address: 'Fayetteville, Washington County, Arkansas', layer: 'Who We Borrow From', lat: 36.0625843, lng: -94.1574328 },
+    { name: 'HARDING UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.2457455, lng: -91.7263463 },
+    { name: 'UNIVERSITY OF OKLAHOMA', type: 'Major Academic Research', address: '', layer: 'Who We Lend To', lat: 35.1959878, lng: -97.4457083 },
+    { name: 'TEXAS TECH UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.5937526, lng: -101.8995955 },
+    { name: 'TEXAS TECH UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 33.5937526, lng: -101.8995955 },
+    { name: 'THE UNIVERSITY OF TEXAS AT DALLAS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 32.9785262, lng: -96.7553288 },
+    { name: 'THE UNIVERSITY OF TEXAS AT DALLAS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.9785262, lng: -96.7553288 },
+    { name: 'LAKEWOOD PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 32.8103749, lng: -96.7534226 },
+    { name: 'FORT WORTH PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 32.7660975, lng: -97.4796455 },
+    { name: 'ARLINGTON PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 32.6831534, lng: -97.1959373 },
+    { name: 'UNIVERSITY OF NORTH TEXAS, DALLAS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 32.6590662, lng: -96.8031669 },
+    { name: 'UNIVERSITY OF NORTH TEXAS, DALLAS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.6590662, lng: -96.8031669 },
+    { name: 'NORTHWESTERN STATE UNIVERSITY OF LOUISIANA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 31.7473401, lng: -93.0989873 },
+    { name: 'MCLENNAN COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 31.5905987, lng: -97.1713209 },
+    { name: 'BAYLOR UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 31.5504341, lng: -97.1102906 },
+    { name: 'ANGELO STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 31.4389278, lng: -100.4553039 },
+    { name: 'CENTURY ASSOCIATION', type: 'Corporate', address: '', layer: 'Who We Lend To', lat: 31.4246711, lng: -100.4375135 },
+    { name: 'TEXAS A&M UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 30.6108618, lng: -96.3520606 },
+    { name: 'UNIVERSITY OF TEXAS AT AUSTIN', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 30.2851494, lng: -97.7339352 },
+    { name: 'UNIVERSITY OF TEXAS AT AUSTIN', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 30.2851494, lng: -97.7339352 },
+    { name: 'UNIVERSITY OF LOUISIANA AT LAFAYETTE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 30.2117256, lng: -92.0195772 },
+    { name: 'UNIVERSITY OF HOUSTON, DOWNTOWN', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 29.7661239, lng: -95.3596316 },
+    { name: 'TEXAS SOUTHERN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 29.7209058, lng: -95.3596267 },
+    { name: 'UNIVERSITY OF TEXAS AT SAN ANTONIO', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 29.5833311, lng: -98.6194451 },
+    { name: 'TRINITY UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 29.4616913, lng: -98.4835083 },
+    { name: 'SOUTHWEST RESEARCH INSTITUTE', type: 'Corporate', address: '', layer: 'Who We Lend To', lat: 29.4441204, lng: -98.6136109 },
+    { name: 'DEL MAR COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 27.7517956, lng: -97.397831 },
+    { name: 'TEXAS A&M INTERNATIONAL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 27.5722485, lng: -99.4325843 },
+    { name: 'MERCY HOSPITAL', type: 'Medical', address: '', layer: 'Who We Lend To', lat: 25.7411276, lng: -80.2142782 },
+    { name: 'NOVA SOUTHEASTERN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 26.0788018, lng: -80.2435108 },
+    { name: 'NOVA SOUTHEASTERN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 26.0788018, lng: -80.2435108 },
+    { name: 'CAPE CORAL PUBLIC LIBRARY, 33914', type: 'Public', address: '921 SW 39th Terrace, Cape Coral, FL. 33914', layer: 'Who We Lend To', lat: 26.5800934, lng: -81.9950965 },
+    { name: 'ECKERD COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 27.7142658, lng: -82.6855432 },
+    { name: 'USSOCOM HEADQUARTERS', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 27.8436409, lng: -82.5028722 },
+    { name: 'UNIVERSITY OF TAMPA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 27.9473468, lng: -82.4654238 },
+    { name: 'UNIVERSITY OF SOUTH FLORIDA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 28.0599999, lng: -82.4138362 },
+    { name: 'PEPPERDINE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 28.5807395, lng: -81.2099413 },
+    { name: 'ROLLINS COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 28.5925815, lng: -81.3483095 },
+    { name: 'UNIVERSITY OF CENTRAL FLORIDA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 28.599591, lng: -81.1971284 },
+    { name: 'FLORIDA SHARED PRINT STORAGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 29.6411884, lng: -82.3562296 },
+    { name: 'FLAGLER COLLEGE ST AUGUSTINE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 29.8932144, lng: -81.3154329 },
+    { name: 'TULANE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 29.9412196, lng: -90.1201009 },
+    { name: 'TULANE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 29.9412196, lng: -90.1201009 },
+    { name: 'NEW ORLEANS PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 29.9543821, lng: -90.0755069 },
+    { name: 'JEFFERSON PARISH EASTBANK REGIONAL LIBRARY', type: 'Public', address: '4747 W Napoleon Ave, Metairie, LA', layer: 'Who We Lend To', lat: 29.9943555, lng: -90.185723 },
+    { name: 'FLORIDA STATE COLLEGE AT JACKSONVILLE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 30.3353821, lng: -81.6598334 },
+    { name: 'UNIVERSITY OF SOUTHERN MISSISSIPPI GULF COAST', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 30.3528503, lng: -89.1377831 },
+    { name: 'JACKSONVILLE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 30.3537227, lng: -81.6073061 },
+    { name: 'LEROY COLLEGELEGEINS LEON COUNTY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 30.442516, lng: -84.2837749 },
+    { name: 'AFRL MUNITIONS DIRECTORATE TECH LIBRARY', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 30.5776961, lng: -86.5139603 },
+    { name: 'WILLIAM CAREY UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 31.3037124, lng: -89.2927378 },
+    { name: 'GEORGIA SOUTHWESTERN STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.0568934, lng: -84.2183923 },
+    { name: 'BREWTON-PARKER COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.1862441, lng: -82.5838967 },
+    { name: 'HINDS COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 32.2537999, lng: -90.4134216 },
+    { name: 'MISSISSIPPI COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.3354174, lng: -90.3318824 },
+    { name: 'FAULKNER UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.3854781, lng: -86.2171061 },
+    { name: 'AUBURN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.5919529, lng: -85.4959775 },
+    { name: 'MERCER UNIVERSITY, TARVER LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 32.8289341, lng: -83.6506702 },
+    { name: 'MISSISSIPPI STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 33.4386876, lng: -88.7943232 },
+    { name: 'SAMFORD UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.4641484, lng: -86.7939592 },
+    { name: 'MISSISSIPPI UNIVERSITY FOR WOMEN', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.4908045, lng: -88.4196557 },
+    { name: 'UNIVERSITY OF BIRMINGHAM', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.5016153, lng: -86.8060476 },
+    { name: 'Atlanta Fulton Public Library', type: 'Public', address: '', layer: 'Who We Lend To', lat: 33.7740462, lng: -84.4470609 },
+    { name: 'UNIVERSITY OF N GEORGIA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.8663131, lng: -83.4261351 },
+    { name: 'SOUTH CAROLINA CRIMINAL JUSTICE ACADEMY', type: 'State Library', address: '', layer: 'Who We Lend To', lat: 34.0788975, lng: -81.1241148 },
+    { name: 'UNIVERSITY OF MISSISSIPPI', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.3646125, lng: -89.5396349 },
+    { name: 'GREENVILLE HEALTH SYSTEM', type: 'Medical', address: '', layer: 'Who We Lend To', lat: 34.851895, lng: -82.3271413 },
+    { name: 'FURMAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.9257744, lng: -82.4385258 },
+    { name: 'YOUNG HARRIS COLLEGE ZELL & SHIRLEY MILLER', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.9357023, lng: -83.8459681 },
+    { name: 'WINTHROP UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 34.9391204, lng: -81.0324911 },
+    { name: 'QUEENS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.1888238, lng: -80.8332959 },
+    { name: 'UNIVERSITY OF N CAROLINA CHARLOTTE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.3064945, lng: -80.7349705 },
+    { name: 'DAVIDSON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.5032193, lng: -80.8339303 },
+    { name: 'WARREN WILSON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.6134478, lng: -82.4406782 },
+    { name: 'ARKANSAS STATE UNIVERSITY MAIN CAMPUS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 35.8441163, lng: -90.6726325 },
+    { name: 'SOUTH COLLEGE 37909', type: 'Academic', address: '3904 Lonas Dr., Knoxville, Tennessee. 37909', layer: 'Who We Lend To', lat: 35.9586257, lng: -83.9735464 },
+    { name: 'WINSTON SSALEM STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.0895154, lng: -80.2239737 },
+    { name: 'WAKE FOREST UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.133893, lng: -80.2755578 },
+    { name: 'BETHEL COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.1421609, lng: -88.515263 },
+    { name: 'VANDERBILT UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 36.1438011, lng: -86.8028189 },
+    { name: 'UNIVERSITY OF TENNESSEE AT MARTIN', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.3414523, lng: -88.8642273 },
+    { name: 'LINCOLN MEMORIAL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 36.5718381, lng: -83.661624 },
+    { name: 'RADFORD UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.1370242, lng: -80.5499612 },
+    { name: 'VIRGINIA TECH', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.2219268, lng: -80.4272818 },
+    { name: 'BEREA COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.5715364, lng: -84.289796 },
+    { name: 'CENTRE COLLEGE OF KENTUCKY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 37.6444259, lng: -84.7809759 },
+    { name: 'UNIVERSITY OF KENTUCKY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.0266291, lng: -84.5047222 },
+    { name: 'LOUISVILLE FREE PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 38.2449282, lng: -85.7577588 },
+    { name: 'SOUTHWESTERN ILLINOIS COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.5186693, lng: -89.9210561 },
+    { name: 'SAINT LOUIS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.635359, lng: -90.231845 },
+    { name: 'CARLETON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.6746833, lng: -90.333562 },
+    { name: 'GLENVILLE STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.9355772, lng: -80.833904 },
+    { name: 'IVY TECH COMMUNITY COLLEGE BLOOMINGTON', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.166724, lng: -86.5972655 },
+    { name: 'UNIVERSITY LIBRARY OF COLUMBUS (Indiana University Columbus & Ivy Tech Community College Columbus Library)', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.2531542, lng: -85.901878 },
+    { name: 'OHIO UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.3241782, lng: -82.1015648 },
+    { name: 'VIGO CNTY PUB LIBRARY', type: 'Public', address: 'Terre Haute, Vigo County, Indiana', layer: 'Who We Lend To', lat: 39.4667025, lng: -87.4139119 },
+    { name: 'XENIA COMMUNITY LIBRARY', type: 'Public', address: '76 E Market St, Xenia, OH', layer: 'Who We Lend To', lat: 39.6863221, lng: -83.9282619 },
+    { name: 'UNIVERSITY OF INDIANAPOLIS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.7093965, lng: -86.1344523 },
+    { name: 'INDIANA UNIVERSITY - INDIANAPOLIS LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.709749, lng: -86.1366133 },
+    { name: 'TECHNICAL KNOWLEDGE CENTER DENMARK', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 55.7854145, lng: 12.5202151 },
+    { name: 'INDIANA STATE LIBRARY', type: 'State Library', address: '', layer: 'Who We Lend To', lat: 39.7697074, lng: -86.1641843 },
+    { name: 'INDIANAPOLIS PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 39.7784094, lng: -86.1567427 },
+    { name: 'REACHING ACROSS ILLINOIS LIBRARY SYST', type: 'Public', address: '', layer: 'Who We Lend To', lat: 39.7988805, lng: -89.6527497 },
+    { name: 'STATE LIBRARY OF OHIO', type: 'State Library', address: '', layer: 'Who We Borrow From', lat: 39.981043, lng: -82.9960709 },
+    { name: 'DENISON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.0730051, lng: -82.5224859 },
+    { name: 'BALL STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.2097296, lng: -85.4112151 },
+    { name: 'KENYON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.3725696, lng: -82.3942746 },
+    { name: 'BLOOMINGTON PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.4765409, lng: -88.9914247 },
+    { name: 'ILLINOIS STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.5179938, lng: -89.0084607 },
+    { name: 'HEARTLAND COMMUNITY COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.534973, lng: -89.0121645 },
+    { name: 'SAINT FRANCIS MEDICAL CENTER COLLEGE OF NURSING', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7019894, lng: -89.590779 },
+    { name: 'ST JOSEPHS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.9216573, lng: -87.1589169 },
+    { name: 'UNIVERSITY OF SAINT FRANCIS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.0869308, lng: -85.1789805 },
+    { name: 'NORTHEAST OHIO REGIONAL LIBRARY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.1019807, lng: -81.2479322 },
+    { name: 'YOUNGSTOWN STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.1067218, lng: -80.6477542 },
+    { name: 'PURDUE UNIVERSITY FT WAYNE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.1210815, lng: -85.1057891 },
+    { name: 'KENT STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.1441814, lng: -81.3398329 },
+    { name: 'ALLEN COUNTY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.1490193, lng: -85.145396 },
+    { name: 'SHOREWOOD TROY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.5240495, lng: -88.2047288 },
+    { name: 'PLAINFIELD PUBLIC LIBRARY DISTRIST', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.6090991, lng: -88.2033076 },
+    { name: 'NOTRE DAME UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.7045677, lng: -86.2382203 },
+    { name: 'UNIVERSITY OF NOTRE DAME', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.7045677, lng: -86.2382203 },
+    { name: 'WOODRIDGE PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.755905, lng: -88.0453618 },
+    { name: 'WAUBONSEE COMMUN COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.7949312, lng: -88.4580921 },
+    { name: 'MORTON COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.8242014, lng: -87.7619225 },
+    { name: 'WHEATON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.8696375, lng: -88.0975552 },
+    { name: 'UNIVERSITY OF ILLINOIS, CHICAGO', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.8748613, lng: -87.6519866 },
+    { name: 'CHICAGO PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.8762833, lng: -87.6282117 },
+    { name: 'OAK PARK PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.8891903, lng: -87.7963594 },
+    { name: 'DOMINICAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.9028967, lng: -87.8226266 },
+    { name: 'DEPAUL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.9245803, lng: -87.6507223 },
+    { name: 'ANDREWS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.9696627, lng: -86.3633155 },
+    { name: 'NORTHEASTERN ILLINOIS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.9785497, lng: -87.7184592 },
+    { name: 'LOYOLA UNIVERSITY OF CHICAGO', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.9991492, lng: -87.6573094 },
+    { name: 'SCHAUMBURG TOWNSHIP DIST LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.0254672, lng: -88.0833696 },
+    { name: 'SKOKIE PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.0258248, lng: -87.7579502 },
+    { name: 'WILMETTE PUBLIC LIBRARY DISTRICT', type: 'Public', address: '1242 Wilmette Ave, Wilmette, IL', layer: 'Who We Lend To', lat: 42.074958, lng: -87.7093496 },
+    { name: 'HIGHLAND PARK PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.1845045, lng: -87.7967312 },
+    { name: 'VERNON AREA PUB LIBRARY DIST', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.1986395, lng: -87.936633 },
+    { name: 'EASTERN MICHIGAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.2522463, lng: -83.6245615 },
+    { name: 'CONCORDIA UNIVERSITY ANN ARBOR LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.2749259, lng: -83.6830552 },
+    { name: 'UNIVERSITY OF MICHIGAN LIBRARY', type: 'Major Academic Research', address: '', layer: 'Who We Lend To', lat: 42.2942142, lng: -83.7100389 },
+    { name: 'GRAYSLAKE AREA PUBLIC LIBRARY DISTRICT', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.3466615, lng: -88.0363046 },
+    { name: 'LAKE MICHIGAN COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.4099165, lng: -86.243949 },
+    { name: 'FARMINGTON COMMUNITY LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.4643195, lng: -83.37795 },
+    { name: 'LAWRENCE TECHNOLOGICAL UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.4752647, lng: -83.2506373 },
+    { name: 'GRAND VALLEY STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.7788336, lng: -86.0760892 },
+    { name: 'UNIVERSITY OF WISCONSIN, WHITEWATER', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.8443596, lng: -88.7436664 },
+    { name: 'CALVIN COLLEGE & THEOLOGICAL SEMINARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.9320314, lng: -85.5803644 },
+    { name: 'MEDICAL COLLEGE OF WISCONSIN', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0438671, lng: -88.0224532 },
+    { name: 'MOUNT MARY UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0725216, lng: -88.0314516 },
+    { name: 'ALMA COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.381474, lng: -84.671349 },
+    { name: 'UNIVERSITY OF WATERLOO LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.4701994, lng: -80.5452429 },
+    { name: 'CENTRAL MICHIGAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.58355, lng: -84.7746308 },
+    { name: 'LAWRENCE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.2607247, lng: -88.398891 },
+    { name: 'UNIVERSITY OF WISCONSIN, MADISON, GEN LIBRARY SYS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.5328424, lng: -87.9198844 },
+    { name: 'NORTHERN MICHIGAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 46.5613244, lng: -87.4104799 },
+    { name: 'BIBLIO ET ARCHIVES NATIONALES DU QUEBEC', type: 'State Library', address: '', layer: 'Who We Lend To', lat: 45.5437382, lng: -73.5855526 },
+    { name: 'MCGILL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 45.5068861, lng: -73.5787118 },
+    { name: 'ECOLE DE TECHNOLOGIE SUPERIEURE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 45.4945155, lng: -73.5628555 },
+    { name: 'NATIONAL RESEARCH COUNCIL CANADA', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 45.4426876, lng: -75.618285 },
+    { name: 'UNIVERSITE DE SHERBROOKE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 45.38022, lng: -71.9235934 },
+    { name: 'CLINTON ESSEX FRANKLIN LIBRARY SYSTEM', type: 'Public', address: '', layer: 'Who We Lend To', lat: 44.6975027, lng: -73.4558053 },
+    { name: 'CLINTON ESSEX FRANKLIN LIBR SYST', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 44.6975027, lng: -73.4558053 },
+    { name: 'SUNY COLLEGE AT PLATTSBURGH', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 44.6835934, lng: -73.4773665 },
+    { name: 'SUNY COLLEGE AT PLATTSBURGH', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.6835934, lng: -73.4773665 },
+    { name: 'SUNY COLLEGE AT POTSDAM', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 44.6606505, lng: -74.9704788 },
+    { name: 'SUNY COLLEGE AT POTSDAM', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.6606505, lng: -74.9704788 },
+    { name: 'CLARKSON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 44.6595888, lng: -75.0062397 },
+    { name: 'CLARKSON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.6595888, lng: -75.0062397 },
+    { name: 'SUNY COLLEGE OF TECH AT CANTON', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.6044677, lng: -75.1862763 },
+    { name: 'SAINT LAWRENCE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.5875988, lng: -75.1481253 },
+    { name: 'COLBY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.5596645, lng: -69.6580742 },
+    { name: 'CHAMPLAIN COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.4739064, lng: -73.2032715 },
+    { name: 'UNIVERSITY OF VERMONT', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 44.4737365, lng: -73.1941468 },
+    { name: 'PAUL SMITHS COLLEGE LIBRARY', type: 'Academic', address: 'Paul Smiths, Franklin County, New York', layer: 'Who We Lend To', lat: 44.433981, lng: -74.252537 },
+    { name: 'BETHLEHEM PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 44.2809648, lng: -71.6824708 },
+    { name: 'BETHLEHEM PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 44.2809648, lng: -71.6824708 },
+    { name: 'VERMONT COLLEGELEGE OF FINE ARTS LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.255444, lng: -72.5667236 },
+    { name: 'BATES COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.1055314, lng: -70.2015082 },
+    { name: 'MIDDLEBURY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 44.0036696, lng: -73.1729528 },
+    { name: 'MIDDLEBURY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.0036696, lng: -73.1729528 },
+    { name: 'JEFFERSON COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.9923363, lng: -75.9353352 },
+    { name: 'NORTH COUNTRY LIBRARY SYSTEM', type: 'Public', address: 'Watertown, Jefferson County, NY', layer: 'Who We Lend To', lat: 43.9747838, lng: -75.9107565 },
+    { name: 'BOWDOIN COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.906924, lng: -69.9615253 },
+    { name: 'BOWDOIN COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.906924, lng: -69.9615253 },
+    { name: 'BLACK WATCH MEMORIAL LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 43.8489673, lng: -73.4253834 },
+    { name: 'VERMONT LAW SCHOOL', type: 'Law Library', address: '', layer: 'Who We Lend To', lat: 43.8218824, lng: -72.5212449 },
+    { name: 'WEST HARTFORD PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 43.7125798, lng: -72.4171085 },
+    { name: 'DARTMOUTH COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.7046757, lng: -72.2942089 },
+    { name: 'UNIVERSITY OF SOUTHERN MAINE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.6832709, lng: -70.4496829 },
+    { name: 'UNIVERSITY OF NEW ENGLAND, BIDDEFORD CAMPUS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.4572089, lng: -70.3833235 },
+    { name: 'SUNY COLLLEGE AT OSWEGO', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.4526147, lng: -76.5429045 },
+    { name: 'SUNY COLLEGE AT OSWEGO', type: 'Academic', address: '7060 NY-104, Oswego, NY', layer: 'Who We Lend To', lat: 43.4525481, lng: -76.5450409 },
+    { name: 'CRANDALL PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 43.3109702, lng: -73.6455017 },
+    { name: 'PHOENIX PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 43.2331974, lng: -76.2924559 },
+    { name: 'US AIR FORCE RESEARCH LABORATORY', type: 'Federal/Natl Government', address: '525 Brooks Road, Rome, New York. 13441', layer: 'Who We Lend To', lat: 43.2217915, lng: -75.4086106 },
+    { name: 'SUNY BROCKPORT', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.209853, lng: -77.9513391 },
+    { name: 'SUNY BROCKPORT', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.209853, lng: -77.9513391 },
+    { name: 'NIOGA LIBRARY SYSTEM', type: 'Public', address: 'Lockport, Niagara County, NY', layer: 'Who We Lend To', lat: 43.1687104, lng: -78.696567 },
+    { name: 'SUNY POLYTECHNIC INSTITUTE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.1421581, lng: -75.2431406 },
+    { name: 'NIAGARA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.1366031, lng: -79.0348892 },
+    { name: 'NIAGARA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.1366031, lng: -79.0348892 },
+    { name: 'UNIVERSITY OF ROCHESTER MEDICAL CENTER', type: 'Medical', address: '601 Elmwood Ave, Rochester, NY', layer: 'Who We Lend To', lat: 43.1225119, lng: -77.6261525 },
+    { name: 'BROCK UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.1177355, lng: -79.2498568 },
+    { name: 'SUNY EMPIRE STATE COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.1158246, lng: -77.6039725 },
+    { name: 'ST. JOHN FISHER UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.1150631, lng: -77.5104317 },
+    { name: 'ST. JOHN FISHER UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.1150631, lng: -77.5104317 },
+    { name: 'NAZARETH UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.1025786, lng: -77.5200682 },
+    { name: 'ROYAL DANISH LIBRARY', type: 'Federal/Natl Government', address: 'Søren Kierkegaards Plads 1, Copenhagen, Denmark', layer: 'Who We Lend To', lat: 55.6730401, lng: 12.5810081 },
+    { name: 'MID-YORK LIBRARY SYSTEM', type: 'Other', address: '1600 Lincoln Ave, Utica, NY', layer: 'Who We Lend To', lat: 43.1000886, lng: -75.242591 },
+    { name: 'SKIDMORE COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.0997374, lng: -73.784111 },
+    { name: 'SKIDMORE COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0997374, lng: -73.784111 },
+    { name: 'UTICA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.0972479, lng: -75.2704844 },
+    { name: 'UTICA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0972479, lng: -75.2704844 },
+    { name: 'ONEIDA HERKIMER MADISON (OHM) BOCES', type: 'Schools Below College Level', address: '', layer: 'Who We Lend To', lat: 43.0937449, lng: -75.3226448 },
+    { name: 'ROCHESTER INSTITUTE OF TECHNOLOGY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0826701, lng: -77.6729322 },
+    { name: 'MOHAWK VAL COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.076606, lng: -75.2166599 },
+    { name: 'ONONDAGA COUNTY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 43.0576587, lng: -76.2070646 },
+    { name: 'HAMILTON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0537974, lng: -75.4069389 },
+    { name: 'LE MOYNE COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.0483412, lng: -76.0851761 },
+    { name: 'LE MOYNE COLLEGELEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0483412, lng: -76.0851761 },
+    { name: 'ONONDAGA CNTY PUBLIC LIBRARY', type: 'Public', address: '447 S Salina St, Syracuse, NY', layer: 'Who We Borrow From', lat: 43.0458885, lng: -76.1515792 },
+    { name: 'SOUTHERN NEW HAMPSHIRE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0374605, lng: -71.4478392 },
+    { name: 'SYRACUSE UNIVIVERSITY COLLEGE OF LAW', type: 'Academic', address: '950 Irving Ave, Syracuse, NY', layer: 'Who We Borrow From', lat: 43.0362733, lng: -76.138769 },
+    { name: 'SUNY COLLEGE OF ENVIRON SCI & FORESTRY', type: 'Academic', address: '1 Forestry Dr, Syracuse, NY', layer: 'Who We Lend To', lat: 43.0347222, lng: -76.1355556 },
+    { name: 'HERKIMER CNTY COM COLLEGELEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0325, lng: -75.0077778 },
+    { name: 'SYRACUSE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 43.0171129, lng: -76.1185536 },
+    { name: 'SYRACUSE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0171129, lng: -76.1185536 },
+    { name: 'GENESEE COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0160577, lng: -78.1403525 },
+    { name: 'ONONDAGA COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 43.0056477, lng: -76.1973428 },
+    { name: 'SUNY AT BUFFALO', type: 'Academic', address: 'University at Buffalo, Amherst, NY', layer: 'Who We Borrow From', lat: 43.0019863, lng: -78.7859649 },
+    { name: 'SUNY AT BUFFALO', type: 'Academic', address: 'University at Buffalo, Amherst, NY', layer: 'Who We Lend To', lat: 43.0019863, lng: -78.7859649 },
+    { name: 'LANDMARK COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.9758092, lng: -72.5109843 },
+    { name: 'BUFFALO & ERIE COUNTY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.9666475, lng: -78.8685804 },
+    { name: 'DAEMEN UNIVERSITY', type: 'Academic', address: '4380 Main St, Amherst, NY', layer: 'Who We Borrow From', lat: 42.9640166, lng: -78.7899685 },
+    { name: 'DAEMEN UNIVERSITY', type: 'Academic', address: '4380 Main St, Amherst, NY', layer: 'Who We Lend To', lat: 42.9640166, lng: -78.7899685 },
+    { name: 'CAZENOVIA COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.9355498, lng: -75.8529292 },
+    { name: 'BUFFALO STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.9335571, lng: -78.8845343 },
+    { name: 'SUNY BUFFALO STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.9335571, lng: -78.8845343 },
+    { name: 'MEDAILLE COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.929649, lng: -78.8558433 },
+    { name: 'CANISIUS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.9274386, lng: -78.853529 },
+    { name: 'KEENE STATE COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.9254736, lng: -72.2808736 },
+    { name: 'BENNINGTON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.9204433, lng: -73.2385253 },
+    { name: 'HOLY TRINITY ORTHODOX SEMINARY', type: 'Academic', address: 'Jordanville, Herkimer County, NY', layer: 'Who We Lend To', lat: 42.9147939, lng: -74.9515431 },
+    { name: 'VILLA MARIA COLLEGE OF BUFFALO', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.9116211, lng: -78.7978081 },
+    { name: 'D\'YOUVILLE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.9028358, lng: -78.8910201 },
+    { name: 'D\'YOUVILLE UNIVERSITY, MONTANTE FAMILY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.9028358, lng: -78.8910201 },
+    { name: 'BUFFALO & ERIE CNTY PUBLIC LIBRARY', type: 'Public', address: '1 Lafayette Square, Buffalo, NY', layer: 'Who We Borrow From', lat: 42.8854155, lng: -78.871789 },
+    { name: 'FINGER LAKES COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.8665712, lng: -76.9870264 },
+    { name: 'FINGER LAKES COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.8665712, lng: -76.9870264 },
+    { name: 'HOBART & WILLIAM SMITH COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.8570498, lng: -76.9871974 },
+    { name: 'HOBART & WILLIAM SMITH COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.8570498, lng: -76.9871974 },
+    { name: 'UNION COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.8175752, lng: -73.9283917 },
+    { name: 'UNION COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.8175752, lng: -73.9283917 },
+    { name: 'COLGATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.8154037, lng: -75.5395816 },
+    { name: 'COLGATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.8154037, lng: -75.5395816 },
+    { name: 'SUNY COLLEGE AT GENESEO', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.7982449, lng: -77.8237202 },
+    { name: 'SUNY COLLEGE AT GENESEO', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.7982449, lng: -77.8237202 },
+    { name: 'SCHENECTADY COUNTY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.7980197, lng: -73.9475011 },
+    { name: 'BOCES DISTRICT OFFICE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.7452102, lng: -73.8361318 },
+    { name: 'WELLS COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.7441175, lng: -76.6934132 },
+    { name: 'RENSSELAER POLYTECHNIC INST', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.7298969, lng: -73.6796678 },
+    { name: 'RUSSELL SAGE COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.7280214, lng: -73.6935695 },
+    { name: 'RUSSELL SAGE COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.7280214, lng: -73.6935695 },
+    { name: 'TROY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.7279633, lng: -73.6919577 },
+    { name: 'SIENA COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.7192659, lng: -73.751192 },
+    { name: 'GUILDERLAND PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.7000984, lng: -73.9048232 },
+    { name: 'GUILDERLAND PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 42.7000984, lng: -73.9048232 },
+    { name: 'HUDSON VAL COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.6963635, lng: -73.6881802 },
+    { name: 'SUNY AT ALBANY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.6864269, lng: -73.8157255 },
+    { name: 'SUNY AT ALBANY LIBRS', type: 'Academic', address: '1400 Washington Ave, Albany, NY', layer: 'Who We Borrow From', lat: 42.682413, lng: -73.8274203 },
+    { name: 'SUNY AGR & TECH COLLEGE AT COBLESKILL', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.6689511, lng: -74.5064331 },
+    { name: 'THE COLLEGE OF SAINT ROSE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.6634258, lng: -73.7858289 },
+    { name: 'THE COLLEGE OF SAINT ROSE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.6634258, lng: -73.7858289 },
+    { name: 'MARIA COLLEGE OF ALBANY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.6576947, lng: -73.8065616 },
+    { name: 'VOORHEESVILLE PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.65689, lng: -73.93965 },
+    { name: 'UPPER HUDSON LIBRARY SYSTEM', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 42.6567021, lng: -73.7620883 },
+    { name: 'UPPER HUDSON LIBRARY SYSTEM', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.6567021, lng: -73.7620883 },
+    { name: 'ST. PETER\'S HOSPITAL', type: 'Medical', address: '', layer: 'Who We Borrow From', lat: 42.6550629, lng: -73.8039756 },
+    { name: 'UNIVERSITY OF MASSACHUSETTS LOWELL', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.6519097, lng: -71.3173628 },
+    { name: 'ALBANY LAW SCHOOL', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.6508098, lng: -73.7773017 },
+    { name: 'ALBANY LAW SCHOOL', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.6508098, lng: -73.7773017 },
+    { name: 'NEW YORK STATE LIBRARY', type: 'State Library', address: '', layer: 'Who We Borrow From', lat: 42.6479231, lng: -73.7615619 },
+    { name: 'NEW YORK STATE LIBRARY', type: 'State Library', address: '', layer: 'Who We Lend To', lat: 42.6479231, lng: -73.7615619 },
+    { name: 'SUNY CORTLAND', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.5927112, lng: -76.1961728 },
+    { name: 'SUNY CORTLAND', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.5927112, lng: -76.1961728 },
+    { name: 'FITCHBURG STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.5882248, lng: -71.7900051 },
+    { name: 'TOMPKINS-CORTLAND COMMUN COL LIBR', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.5013132, lng: -76.2867182 },
+    { name: 'TOMPKINS-CORTLAND COMMUN COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.5013132, lng: -76.2867182 },
+    { name: 'SUNY COLLEGE AT ONEONTA', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.4720574, lng: -75.0628514 },
+    { name: 'SUNY COLLEGE AT ONEONTA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.4720574, lng: -75.0628514 },
+    { name: 'CORNELL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.4529076, lng: -76.4800842 },
+    { name: 'SUNY COLLEGE AT FREDONIA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.4491529, lng: -79.3359411 },
+    { name: 'FINGER LAKES LIBRARY SYSTEM', type: 'Public', address: '119 E Green St, Ithaca, NY', layer: 'Who We Borrow From', lat: 42.4385659, lng: -76.4984598 },
+    { name: 'FINGER LAKES LIBRARY SYSTEM', type: 'Public', address: '119 E Green St, Ithaca, NY', layer: 'Who We Lend To', lat: 42.4385659, lng: -76.4984598 },
+    { name: 'TUFTS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.4064499, lng: -71.1180771 },
+    { name: 'UNIVERSITY OF MASSACHUSETTS AMHERST', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.3893259, lng: -72.5283614 },
+    { name: 'UNIVERSITY OF MASSACHUSETTS AMHERST', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3893259, lng: -72.5283614 },
+    { name: 'HARVARD UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3657432, lng: -71.1222139 },
+    { name: 'MASSACHUSETTS INSTITUTE OF TECHNOLOGY', type: 'Major Academic Research', address: '', layer: 'Who We Lend To', lat: 42.3582529, lng: -71.0966272 },
+    { name: 'SUFFOLK UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3567011, lng: -71.0610578 },
+    { name: 'EMERSON COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3522439, lng: -71.0655492 },
+    { name: 'BOSTON PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 42.3493298, lng: -71.0786547 },
+    { name: 'SIMMONS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3389354, lng: -71.1004318 },
+    { name: 'MASSACHUSETTS COLLEGE OF PHARMACY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3368067, lng: -71.1011895 },
+    { name: 'NEWTON FREE LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 42.3358388, lng: -71.2079074 },
+    { name: 'NEWTON FREE LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.3358388, lng: -71.2079074 },
+    { name: 'BOSTON UNIVERSITY SCH OF MED MEDL LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3356229, lng: -71.0716153 },
+    { name: 'ANNA MARIA COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.3304202, lng: -71.9197398 },
+    { name: 'HAMPSHIRE COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3250218, lng: -72.5294022 },
+    { name: 'HELLENIC COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3165207, lng: -71.1269899 },
+    { name: 'SMITH COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.3162239, lng: -72.6403932 },
+    { name: 'UNIVERSITY OF MASSACHUSETTS BOSTON', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.314068, lng: -71.0387132 },
+    { name: 'BABSON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.2949962, lng: -71.2649172 },
+    { name: 'WELLESLEY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.2895485, lng: -71.3144942 },
+    { name: 'WELLESLEY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.2895485, lng: -71.3144942 },
+    { name: 'WORCESTER STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.2677195, lng: -71.8427016 },
+    { name: 'WORCESTER PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.2604719, lng: -71.800278 },
+    { name: 'UNIVERSITY OF CAPE TOWN', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: -33.9567558, lng: 18.4675777 },
+    { name: 'SUNY ALFRED STATE COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.2561256, lng: -77.7979136 },
+    { name: 'ALFRED UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.255862, lng: -77.7857087 },
+    { name: 'MOUNT HOLYOKE COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.2553285, lng: -72.5696688 },
+    { name: 'THOMAS CRANE PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.2515107, lng: -71.0008246 },
+    { name: 'CLARK UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.2514681, lng: -71.8229509 },
+    { name: 'CLARK UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.2514681, lng: -71.8229509 },
+    { name: 'ERIE CNTY PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 42.152774, lng: -80.0130455 },
+    { name: 'ELMS COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.1419011, lng: -72.600423 },
+    { name: 'SUNY BROOME COMMUNITY COLLEGE', type: 'Academic', address: '907 Upper Front St, Binghamton, NY', layer: 'Who We Lend To', lat: 42.1375273, lng: -75.9054179 },
+    { name: 'WESTFIELD STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.1339674, lng: -72.7993918 },
+    { name: 'CORNING COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.1165663, lng: -77.0741513 },
+    { name: 'SPRINGFIELD COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.1028421, lng: -72.5567149 },
+    { name: 'ELMIRA COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.0944203, lng: -76.8155382 },
+    { name: 'SUNY AT BINGHAMTON', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.0877998, lng: -75.9706607 },
+    { name: 'SUNY, MONROE COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.0877998, lng: -75.9706607 },
+    { name: 'SUNY, STONY BROOK UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.0877998, lng: -75.9706607 },
+    { name: 'SUNY AT BINGHAMTON', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.0877998, lng: -75.9706607 },
+    { name: 'SUNY, MONROE COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.0877998, lng: -75.9706607 },
+    { name: 'SAINT BONAVENTURE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.0846431, lng: -78.4854308 },
+    { name: 'SAINT BONAVENTURE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.0846431, lng: -78.4854308 },
+    { name: 'STONEHILL COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.0599777, lng: -71.0793257 },
+    { name: 'BAY PATH UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.055796, lng: -72.5841918 },
+    { name: 'BARD COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 42.0225482, lng: -73.9107242 },
+    { name: 'BARD COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 42.0225482, lng: -73.9107242 },
+    { name: 'BRIDGEWATER STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.9882958, lng: -70.9635926 },
+    { name: 'BRYANT UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.9220914, lng: -71.5371517 },
+    { name: 'PROVIDENCE COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.8442938, lng: -71.4354886 },
+    { name: 'PROVIDENCE COLLEGE, PHILLIPS MEM LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.8442938, lng: -71.4354886 },
+    { name: 'RI OFFICE OF LIBRARY AND INFORMATION SERVICES', type: 'State Library', address: '', layer: 'Who We Lend To', lat: 41.8309372, lng: -71.4154147 },
+    { name: 'RHODE ISLAND COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.8255798, lng: -71.402447 },
+    { name: 'UNIVERSITY OF CONNECTICUT', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.8111114, lng: -72.2483889 },
+    { name: 'UNIVERSITY OF CONNECTICUT', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.8111114, lng: -72.2483889 },
+    { name: 'COMMONWEALTH UNIVERSITY, MANSFIELD', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.804302, lng: -77.069778 },
+    { name: 'UNIVERSITY OF HARTFORD', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.799161, lng: -72.7137661 },
+    { name: 'LIBRARY OF CONGRESS', type: 'State Library', address: '', layer: 'Who We Borrow From', lat: 41.7557513, lng: -72.6781866 },
+    { name: 'CULINARY INST OF AMER LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.7538495, lng: -73.933651 },
+    { name: 'UNIVERSITY OF CONNECTICUT HEALTH CTR', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.7334454, lng: -72.7923453 },
+    { name: 'SUNY AT NEW PALTZ', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.7328368, lng: -74.0888052 },
+    { name: 'SUNY AT NEW PALTZ', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.7328368, lng: -74.0888052 },
+    { name: 'KENT SCHOOL', type: 'Schools Below College Level', address: '', layer: 'Who We Lend To', lat: 41.7273403, lng: -73.4865804 },
+    { name: 'DUTCHESS COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.7261284, lng: -73.8997412 },
+    { name: 'MARIST UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.722007, lng: -73.9343836 },
+    { name: 'MARIST UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.722007, lng: -73.9343836 },
+    { name: 'EASTERN CONNECTICUT STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.7210177, lng: -72.217649 },
+    { name: 'MID-HUDSON LIBRARY SYSTEM', type: 'Public', address: '103 Market St, Poughkeepsie, NY', layer: 'Who We Lend To', lat: 41.700453, lng: -73.9305451 },
+    { name: 'CAPE COD COMMUN COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.6927589, lng: -70.3369364 },
+    { name: 'VASSAR COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.6854718, lng: -73.8934933 },
+    { name: 'VASSAR COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.6854718, lng: -73.8934933 },
+    { name: 'WESLEYAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.5559033, lng: -72.6559884 },
+    { name: 'RAMAPO CATSKILL LIBRARY SYSTEM', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.4743909, lng: -74.4158453 },
+    { name: 'ORANGE COUNTY COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.4384808, lng: -74.4266981 },
+    { name: 'QUINNIPIAC UNIVERSITY SCHOOL OF LAW', type: 'Academic', address: '275 Mount Carmel Ave, Hamden, CT', layer: 'Who We Lend To', lat: 41.4202254, lng: -72.8951366 },
+    { name: 'UNITED STATES MILITARY ACADEMY AT WEST POINT', type: 'Academic', address: 'West Point, NY 10996', layer: 'Who We Lend To', lat: 41.3926455, lng: -73.9599242 },
+    { name: 'CONNECTICUT COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.3791334, lng: -72.1065306 },
+    { name: 'SOUTHERN CONNECTICUT STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.3342104, lng: -72.9450826 },
+    { name: 'YALE UNIVERSITY LIBRARY', type: 'Major Academic Research', address: '', layer: 'Who We Lend To', lat: 41.3321912, lng: -72.9202047 },
+    { name: 'GUILFORD FREE LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.2840047, lng: -72.6807882 },
+    { name: 'RIDGEFIELD PUBLIC LIBRARY, 06877', type: 'Public', address: '472 MAIN STREET, 06877', layer: 'Who We Lend To', lat: 41.2837402, lng: -73.4978697 },
+    { name: 'IBM TJ WATSON RESEARCH CENTER', type: 'Corporate', address: 'Yorktown Heights, Westchester County, NY', layer: 'Who We Lend To', lat: 41.2701781, lng: -73.7753539 },
+    { name: 'YALE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.2571306, lng: -72.9896696 },
+    { name: 'YALE UNIVERSITY, LAW SCHOOL LIBRARY', type: 'Law Library', address: '', layer: 'Who We Lend To', lat: 41.2571306, lng: -72.9896696 },
+    { name: 'OSTERHOUT FREE LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.2460727, lng: -75.8853857 },
+    { name: 'SACRED HEART UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.221903, lng: -73.2428655 },
+    { name: 'EPA REGION 2', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 41.210021, lng: -73.1079365 },
+    { name: 'LUZERNE COUNTY COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.1938759, lng: -75.9910072 },
+    { name: 'STRATFORD LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.1906343, lng: -73.1311925 },
+    { name: 'HORACE GREELEY HIGH SCHOOL', type: 'Schools Below College Level', address: '', layer: 'Who We Lend To', lat: 41.1753023, lng: -73.7574932 },
+    { name: 'FAIRFIELD UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.1596757, lng: -73.2574031 },
+    { name: 'NEW CANAAN LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.1451692, lng: -73.4922795 },
+    { name: 'NORTHAMPTON COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.1447754, lng: -75.3644804 },
+    { name: 'SUNY ROCKLAND COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.1330926, lng: -74.0886395 },
+    { name: 'PACE UNIVERSITY PLEASANTVILLE LIBRARY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.1287111, lng: -73.8081375 },
+    { name: 'PACE UNIVERSITY PLEASANTVILLE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.1287111, lng: -73.8081375 },
+    { name: 'NEW YORK MEDICAL COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.084986, lng: -73.811039 },
+    { name: 'NEW YORK MEDICAL COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.0849859, lng: -73.811039 },
+    { name: 'RAMAPO COLLEGE OF NEW JERSEY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.0822446, lng: -74.1738235 },
+    { name: 'DARIEN LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.0687698, lng: -73.4782129 },
+    { name: 'WESTCHESTER LIBRARY SYSTEM', type: 'Public', address: '540 White Plains Rd, Tarrytown, NY', layer: 'Who We Borrow From', lat: 41.0610339, lng: -73.8413328 },
+    { name: 'WESTCHESTER LIBRARY SYSTEM', type: 'Public', address: '540 White Plains Rd, Tarrytown, NY', layer: 'Who We Lend To', lat: 41.0610339, lng: -73.8413328 },
+    { name: 'SUNY COLLEGE AT PURCHASE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.0476826, lng: -73.7023563 },
+    { name: 'SUNY COLLEGE AT PURCHASE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.0476826, lng: -73.7023563 },
+    { name: 'DOMINICAN UNIVERSITY NEW YORK', type: 'Academic', address: '470 Western Hwy, Orangeburg, NY', layer: 'Who We Lend To', lat: 41.0472682, lng: -73.9505295 },
+    { name: 'SAINT THOMAS AQUINAS COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.0412948, lng: -73.9371582 },
+    { name: 'PACE UNIVERSITY LAW LIBRARY', type: 'Law Library', address: '78 N Broadway, White Plains, NY', layer: 'Who We Lend To', lat: 41.0395768, lng: -73.7666945 },
+    { name: 'MANHATTANVILLE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 41.0321594, lng: -73.7159265 },
+    { name: 'MANHATTANVILLE COLLEGE LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 41.0313935, lng: -73.7155858 },
+    { name: 'GREENWICH LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.0287718, lng: -73.6294602 },
+    { name: 'OAKLAND PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 41.0235633, lng: -74.2448408 },
+    { name: 'BERGEN COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.9501907, lng: -74.0883598 },
+    { name: 'SARAH LAWRENCE COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.9344239, lng: -73.8449773 },
+    { name: 'SAINT JOSEPH\'S SEMINARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.9310727, lng: -73.864298 },
+    { name: 'WAYNE PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.9285631, lng: -74.2320131 },
+    { name: 'SUNY AT STONY BROOK', type: 'Academic', address: 'Stony Brook, NY 11794', layer: 'Who We Borrow From', lat: 40.9256538, lng: -73.140943 },
+    { name: 'SUNY AT STONY BROOK, HEALTH SCI LIBRARY', type: 'Medical', address: 'Stony Brook, NY 11794', layer: 'Who We Lend To', lat: 40.9256538, lng: -73.140943 },
+    { name: 'UNIVERSITY OF MOUNT SAINT VINCENT', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.9128571, lng: -73.906968 },
+    { name: 'FAIRLEIGH DICKINSON UNIVERSITY METROP CAM', type: 'Academic', address: '1000 River Rd, Teaneck, NJ', layer: 'Who We Lend To', lat: 40.8946121, lng: -74.030239 },
+    { name: 'CUNY LEHMAN COLLEGE', type: 'Academic', address: '250 Bedford Park Blvd W, Bronx, NY', layer: 'Who We Borrow From', lat: 40.8722825, lng: -73.8948917 },
+    { name: 'CUNY LEHMAN COLLEGELEGE LIBRARY', type: 'Academic', address: '250 Bedford Park Blvd W, Bronx, NY', layer: 'Who We Lend To', lat: 40.8722825, lng: -73.8948917 },
+    { name: 'COLD SPRING HARBOR LABORATORY', type: 'Corporate', address: '', layer: 'Who We Lend To', lat: 40.8623522, lng: -73.4699926 },
+    { name: 'FORDHAM UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.8617344, lng: -73.8860317 },
+    { name: 'FORDHAM UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8617344, lng: -73.8860317 },
+    { name: 'ALBERT EINSTEIN COLLEGE OF MEDICINE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8542807, lng: -73.8456159 },
+    { name: 'YESHIVA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8489807, lng: -73.9298403 },
+    { name: 'CALDWELL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8339079, lng: -74.2713297 },
+    { name: 'CUNY CITY COLLEGE', type: 'Academic', address: '160 Convent Ave, New York, NY', layer: 'Who We Borrow From', lat: 40.8192673, lng: -73.9493043 },
+    { name: 'CUNY HOSTOS COMMUNITY COLLEGE', type: 'Academic', address: '500 Grand Concourse, Bronx, NY', layer: 'Who We Lend To', lat: 40.8180719, lng: -73.9268414 },
+    { name: 'PENNSYLVANIA STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8128971, lng: -77.8710571 },
+    { name: 'MANHATTAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.8125642, lng: -73.9612954 },
+    { name: 'MANHATTAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8125642, lng: -73.9612954 },
+    { name: 'UNIVERSITY OF FORT HARE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: -32.7848724, lng: 26.8501634 },
+    { name: 'US MERCHANT MARINE ACADEMY', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 40.8123337, lng: -73.7619648 },
+    { name: 'JEWISH THEOLOGICAL SEMINARY OF AMERICA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8118975, lng: -73.9602617 },
+    { name: 'TEACHERS COLLEGE, COLUMBIA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8103443, lng: -73.9605043 },
+    { name: 'COLUMBIA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.8077507, lng: -73.9624901 },
+    { name: 'COLLEGEUMBIA UNIVERSITY IN THE CITY OF NEW YORK', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8077507, lng: -73.9624901 },
+    { name: 'SUNY MARITIME COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.8070979, lng: -73.7957328 },
+    { name: 'SUNY MARITIME COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.8070979, lng: -73.7957328 },
+    { name: 'MORRIS COUNTY LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.8064579, lng: -74.4525257 },
+    { name: 'SYOSSET PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.7987691, lng: -73.5021128 },
+    { name: 'SUNY COLLEGE AT OLD WESTBURY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.793775, lng: -73.5676695 },
+    { name: 'UNIVERSITY OF NOTTINGHAM', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7911098, lng: -73.7469236 },
+    { name: 'ICAHN SCHOOL OF MEDICINE AT MOUNT SINAI', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.789793, lng: -73.9532536 },
+    { name: 'SUFFOLK COOP LIBRARY SYSTEM', type: 'Public', address: '627 N Sunrise Service Rd, Bellport, NY', layer: 'Who We Lend To', lat: 40.7889799, lng: -72.9607263 },
+    { name: 'GREAT NECK LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 40.785704, lng: -73.7263443 },
+    { name: 'GREAT NECK LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.785704, lng: -73.7263443 },
+    { name: 'THE DALTON SCHOOL', type: 'Schools Below College Level', address: '', layer: 'Who We Lend To', lat: 40.7815406, lng: -73.9550555 },
+    { name: 'AMERICAN MUSEUM OF NATURAL HISTORY LIBRARY', type: 'Corporate', address: '', layer: 'Who We Borrow From', lat: 40.7811007, lng: -73.9742362 },
+    { name: 'NEW YORK SOCIETY LIBRARY', type: 'Corporate', address: '', layer: 'Who We Lend To', lat: 40.7763303, lng: -73.9614771 },
+    { name: 'THE JUILLIARD SCHOOL', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7738393, lng: -73.9831016 },
+    { name: 'FORDHAM LAW SCH THE MALONEY LIBRARY', type: 'Law Library', address: '', layer: 'Who We Lend To', lat: 40.7715532, lng: -73.9850121 },
+    { name: 'CUNY JOHN JAY COL OF CRIMINAL JUSTICE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7707024, lng: -73.9892566 },
+    { name: 'CUNY JOHN JAY COLLEGE OF CRIMINAL JUSTICE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7707024, lng: -73.9892566 },
+    { name: 'NEW YORK INSTITUTE OF TECHNOLOGY, LONG ISLAND CAMPUS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7698455, lng: -73.982869 },
+    { name: 'MARYMOUNT MANHATTAN COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7689316, lng: -73.9596956 },
+    { name: 'CUNY HUNTER COLLEGE', type: 'Academic', address: '695 Park Ave, New York, NY', layer: 'Who We Borrow From', lat: 40.7683107, lng: -73.964406 },
+    { name: 'CUNY HUNTER COLLEGE', type: 'Academic', address: '695 Park Ave, New York, NY', layer: 'Who We Lend To', lat: 40.7683107, lng: -73.964406 },
+    { name: 'RUSSELL SAGE FOUNDATION LIBRARY', type: 'Association/Foundation', address: '112 EAST 64TH STREET, NEW YORK, NY. 10021', layer: 'Who We Lend To', lat: 40.7656198, lng: -73.9669415 },
+    { name: 'TOURO COLLEGE LAW', type: 'Academic', address: '225 Eastview Dr, Central Islip, NY', layer: 'Who We Lend To', lat: 40.762085, lng: -73.1876864 },
+    { name: 'VAUGHN COLLEGE OF AERONAUTICS & TECHNOLOGY', type: 'Academic', address: 'East Elmhurst, Queens, New York', layer: 'Who We Borrow From', lat: 40.7612123, lng: -73.8651358 },
+    { name: 'SUNY/STATE COLLEGE OF OPTOMETRY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7544374, lng: -73.9822053 },
+    { name: 'FARMINGDALE STATE COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7539202, lng: -73.4285044 },
+    { name: 'NEW YORK PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 40.7533445, lng: -73.9821524 },
+    { name: 'NEW YORK PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.7533445, lng: -73.9821524 },
+    { name: 'MERCY UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7496978, lng: -73.9871027 },
+    { name: 'NEW YORK STATE DEPT OF HEALTH', type: 'State or Municipal Governments', address: '', layer: 'Who We Lend To', lat: 40.749458, lng: -73.9391275 },
+    { name: 'CUNY GRADUATE CENTER', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7485189, lng: -73.9836393 },
+    { name: 'CUNY GRADUATE CENTER', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7485189, lng: -73.9836393 },
+    { name: 'CUNY, LAW SCHOOL', type: 'Law Library', address: '', layer: 'Who We Lend To', lat: 40.7485188, lng: -73.9836393 },
+    { name: 'CUNY, LAW SCHOOL', type: 'Law Library', address: '', layer: 'Who We Borrow From', lat: 40.7485188, lng: -73.9836393 },
+    { name: 'FASHION INSTITUTE OF TECHNOLOGY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7471159, lng: -73.9946024 },
+    { name: 'FASHION INST OF TECHNOL', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7471159, lng: -73.9946024 },
+    { name: 'STEVENS INSTITUTE OF TECHNOLOGY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7448096, lng: -74.0252392 },
+    { name: 'CUNY LAGUARDIA COMMUNITY COLLEGE', type: 'Academic', address: '31-10 Thomson Ave, Long Island City, NY', layer: 'Who We Borrow From', lat: 40.7441527, lng: -73.9379344 },
+    { name: 'NEW YORK UNIVERSITY LANGONE MEDL CTR', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7434467, lng: -73.9722189 },
+    { name: 'SETON HALL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7433314, lng: -74.2468921 },
+    { name: 'SETON HALL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7433314, lng: -74.2468921 },
+    { name: 'CUNY BARUCH COLLEGE', type: 'Academic', address: '151 E 25th St, New York, NY', layer: 'Who We Borrow From', lat: 40.7407565, lng: -73.982779 },
+    { name: 'CUNY BARUCH COLLEGE', type: 'Academic', address: '151 E 25th St, New York, NY', layer: 'Who We Lend To', lat: 40.7407565, lng: -73.982779 },
+    { name: 'SCHOOL OF VISUAL ARTS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7387542, lng: -73.9822417 },
+    { name: 'SCHOOL OF VISUAL ARTS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7387542, lng: -73.9822417 },
+    { name: 'BARD HIGH SCH EARLY COLLEGE - QUEENS', type: 'Schools Below College Level', address: '74-09 Commonwealth Blvd, Queens, NY', layer: 'Who We Lend To', lat: 40.7372365, lng: -73.7229487 },
+    { name: 'CUNY QUEENS COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.737004, lng: -73.8251979 },
+    { name: 'CUNY QUEENS COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.737004, lng: -73.8251979 },
+    { name: 'UNIVERSITY OF ESSEX', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7367601, lng: -74.1663831 },
+    { name: 'THE NEW SCHOOL', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7354792, lng: -73.9970709 },
+    { name: 'NEW SCH THE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7354792, lng: -73.9970709 },
+    { name: 'CARDOZO SCHOOL OF LAW', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7347012, lng: -73.994275 },
+    { name: 'CARDOZO SCHOOL OF LAW', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7347012, lng: -73.994275 },
+    { name: 'FARMINGDALE STATE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7328811, lng: -73.4458564 },
+    { name: 'NASSAU COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7299983, lng: -73.5930089 },
+    { name: 'NEW YORK UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7292053, lng: -73.9950148 },
+    { name: 'NEW YORK UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7292053, lng: -73.9950148 },
+    { name: 'ST. JOHN\'S UNIVERSITY LIBRARY NETWORK', type: 'Academic', address: '8000 Utopia Pkwy, Jamaica, NY', layer: 'Who We Borrow From', lat: 40.7224988, lng: -73.7962487 },
+    { name: 'ST. JOHNS UNIVERSITY LIBRARY NETWORK', type: 'Academic', address: '8000 Utopia Pkwy, Jamaica, NY', layer: 'Who We Lend To', lat: 40.7224988, lng: -73.7962487 },
+    { name: 'ADELPHI UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.7197638, lng: -73.6519719 },
+    { name: 'ADELPHI UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7197638, lng: -73.6519719 },
+    { name: 'JERSEY CITY FREE PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.7189164, lng: -74.0473875 },
+    { name: 'HOFSTRA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.7169083, lng: -73.6000225 },
+    { name: 'HOFSTRA UNIVERSITY LAW SCH LIBRARY', type: 'Academic', address: '121 Hofstra University, Hempstead, NY', layer: 'Who We Lend To', lat: 40.7157086, lng: -73.6024713 },
+    { name: 'NEW YORK CITY LAW DEPARTMENT', type: 'Law Library', address: '100 Church St, New York, NY', layer: 'Who We Lend To', lat: 40.7132886, lng: -74.0101248 },
+    { name: 'CENTER FOR MODERN PSYCHOANALYTIC STUDIES', type: 'Corporate', address: '', layer: 'Who We Lend To', lat: 40.7127281, lng: -74.0060152 },
+    { name: 'QUEENS BOROUGH PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 40.7051622, lng: -73.9025584 },
+    { name: 'QUEENS BOROUGH PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.7051622, lng: -73.9025584 },
+    { name: 'NASSAU LIBRARY SYSTEM', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.6957806, lng: -73.5851429 },
+    { name: 'CUNY NEW YORK CITY COLLEGE OF TECHNOLOGY', type: 'Academic', address: '300 Jay St, Brooklyn, NY', layer: 'Who We Lend To', lat: 40.6952788, lng: -73.9873073 },
+    { name: 'SAINT FRANCIS COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.6930666, lng: -73.9922031 },
+    { name: 'BROOKLYN LAW SCHOOL', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.6918782, lng: -73.9897197 },
+    { name: 'PRATT INSTITUTE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.6913383, lng: -73.9630163 },
+    { name: 'ST JOSEPHS COLLEGE NEW YORK', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.6904276, lng: -73.9677752 },
+    { name: 'MOLLOY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.686594, lng: -73.6246021 },
+    { name: 'MOLLOY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.686594, lng: -73.6246021 },
+    { name: 'RED HOOK HIGH SCHOOL', type: 'Schools Below College Level', address: '', layer: 'Who We Lend To', lat: 40.6777963, lng: -74.0141496 },
+    { name: 'UCNJ UNION COLLEGE OF UNION COUNTY, NJ', type: 'Academic', address: '1033 Springfield Ave, Cranford, NJ', layer: 'Who We Lend To', lat: 40.6682865, lng: -74.3184877 },
+    { name: 'SUNY HEALTH SCI CTR AT BROOKLYN', type: 'Medical', address: '450 Clarkson Ave, Brooklyn, NY', layer: 'Who We Lend To', lat: 40.6553702, lng: -73.9450773 },
+    { name: 'BROOKLYN PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.6408392, lng: -73.9659741 },
+    { name: 'BROOKLYN PUBLIC LIBRRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 40.6408392, lng: -73.9659741 },
+    { name: 'CUNY BROOKLYN COLLEGE', type: 'Academic', address: '2900 Bedford Ave, Brooklyn, NY', layer: 'Who We Borrow From', lat: 40.6310352, lng: -73.9520082 },
+    { name: 'CUNY BROOKLYN COLLEGE', type: 'Academic', address: '2900 Bedford Ave, Brooklyn, NY', layer: 'Who We Lend To', lat: 40.6310352, lng: -73.9520082 },
+    { name: 'THE FREE LIBRARY OF PHILADELPHIA', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.6232591, lng: -79.1558048 },
+    { name: 'WAGNER COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.6147187, lng: -74.0935587 },
+    { name: 'INDIANA UNIVERSITY OF PENNSYLVANIA MAIN CAMPUS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.6141908, lng: -79.1609813 },
+    { name: 'INDIANA UNIVERSITY OF PENNSYLVANIA MAIN CAM', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.6141908, lng: -79.1609813 },
+    { name: 'RARITAN VAL COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.6100961, lng: -74.6882225 },
+    { name: 'SOMERSET CNTY LIBRARY', type: 'Public', address: '1 Vogt Dr, Bridgewater, NJ', layer: 'Who We Lend To', lat: 40.588987, lng: -74.60855 },
+    { name: 'CUNY KINGSBOROUGH COMMUNITY COLLEGE', type: 'Academic', address: '2001 Oriental Blvd, Brooklyn, NY', layer: 'Who We Borrow From', lat: 40.5781918, lng: -73.9349655 },
+    { name: 'WOODBRIDGE PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 40.5676992, lng: -74.2879529 },
+    { name: 'DESALES UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.5379677, lng: -75.379763 },
+    { name: 'DESALES UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.5373132, lng: -75.3787736 },
+    { name: 'MIDDLESEX COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.5054276, lng: -74.3663357 },
+    { name: 'MIDDLESEX COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.5054276, lng: -74.3663357 },
+    { name: 'MOUNT ALOYSIUS COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.4587123, lng: -78.6040379 },
+    { name: 'CCAC ALLEGHENY CAMPUS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.4503022, lng: -80.0173095 },
+    { name: 'UNIVERSITY OF PITTSBURGH', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.444153, lng: -79.962461 },
+    { name: 'CARNEGIE LIBRARY OF PITTSBURGH', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.4082071, lng: -79.9438963 },
+    { name: 'HUNTERDON COUNTY LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.365672, lng: -74.9422879 },
+    { name: 'PRINCETON PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.3517225, lng: -74.6603032 },
+    { name: 'PRINCETON THEOLOGICAL SEMINARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.3445371, lng: -74.6641629 },
+    { name: 'EDUCATIONAL TESTING SERVICES', type: 'Corporate', address: '666 Rosedale Rd, Princeton, NJ 08540', layer: 'Who We Lend To', lat: 40.3435475, lng: -74.7147826 },
+    { name: 'LEBANON VAL COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.3345578, lng: -76.5137456 },
+    { name: 'UNIVERSITY OF AUCKLAND LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: -36.8660955, lng: 174.7737331 },
+    { name: 'PENNINGTON PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.3292614, lng: -74.7921416 },
+    { name: 'BROOKDALE COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.3258392, lng: -74.1314935 },
+    { name: 'RIDER UNIVERSITY LIBRARY', type: 'Academic', address: '2083 Lawrenceville Rd, Lawrenceville, NJ', layer: 'Who We Lend To', lat: 40.3037457, lng: -74.7243955 },
+    { name: 'HERSHEY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.2764287, lng: -76.6468712 },
+    { name: 'THE COLLEGE OF NEW JERSEY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.2685516, lng: -74.7779768 },
+    { name: 'BUCKS COUNTY COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.2394494, lng: -74.9657987 },
+    { name: 'BUCKS COUNTY COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.2394494, lng: -74.9657987 },
+    { name: 'NEW JERSEY ILL ACCESS CTR', type: 'State Library', address: '', layer: 'Who We Lend To', lat: 40.220915, lng: -74.7723471 },
+    { name: 'GEORGIAN COURT UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.0981853, lng: -74.2282 },
+    { name: 'ARCADIA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.0917062, lng: -75.1651024 },
+    { name: 'SHIPPENSBURG UNIVERSITY OF PENNSYLVANIA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.0666916, lng: -77.519169 },
+    { name: 'LA SALLE UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.0376298, lng: -75.1540025 },
+    { name: 'VILLANOVA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.0367835, lng: -75.3420185 },
+    { name: 'VILLANOVA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.0367835, lng: -75.3420185 },
+    { name: 'CHESTER COUNTY LIBRARY & DIST CTR', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.0320969, lng: -75.6207997 },
+    { name: 'MONTGOMERY CNTY, NORRISTOWN PUB LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 40.0176371, lng: -75.3225525 },
+    { name: 'HAVERFORD COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 40.0071506, lng: -75.3069423 },
+    { name: 'HAVERFORD COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 40.0071506, lng: -75.3069423 },
+    { name: 'JOINT BASE MCGUIRE-DIX-LAKEHURST LIBRARY', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 39.9983266, lng: -74.5403654 },
+    { name: 'MILLERSVILLE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.9979459, lng: -76.3509768 },
+    { name: 'TEMPLE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.981188, lng: -75.1562828 },
+    { name: 'DREXEL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.9569305, lng: -75.1899265 },
+    { name: 'UNIVERSITY OF PENNSYLVANIA BIDDLE LAW LIBRARY', type: 'Law Library', address: '3400 Chestnut St, Philadelphia, PA', layer: 'Who We Lend To', lat: 39.95441, lng: -75.192 },
+    { name: 'OCEAN COUNTY LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 39.9523743, lng: -74.1957371 },
+    { name: 'UNIVERSITY OF PENNSYLVANIA', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.9522148, lng: -75.1955729 },
+    { name: 'NORTH-WEST UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.9519084, lng: -75.5972947 },
+    { name: 'YORK COLLEGE OF PENNSYLVANIA', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.9474471, lng: -76.7267984 },
+    { name: 'ST JOSEPHS UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.9459273, lng: -75.2066484 },
+    { name: 'WEST CHESTER UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.9373892, lng: -75.6001867 },
+    { name: 'WIDENER UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.8606395, lng: -75.3565932 },
+    { name: 'YORK CNTY LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 39.7513352, lng: -76.6799325 },
+    { name: 'ROWAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.7103526, lng: -75.1193267 },
+    { name: 'NEW CASTLE COUNTY PUBLIC LIBRARY SYSTEM', type: 'Public', address: '461 W Chestnut Hill Rd, Newark, DE', layer: 'Who We Lend To', lat: 39.648002, lng: -75.7733708 },
+    { name: 'WEST VIRGINIA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.6348398, lng: -79.9542095 },
+    { name: 'STOCKTON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.4900756, lng: -74.5340195 },
+    { name: 'ROWAN COLLEGE OF S JERSEY RCSJ-CUMBERLAND', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.4386372, lng: -75.0570071 },
+    { name: 'HOOD COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.4229618, lng: -77.4189171 },
+    { name: 'TOWSON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.3869768, lng: -76.6185804 },
+    { name: 'LOYOLA NOTRE DAME LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.3498664, lng: -76.6169734 },
+    { name: 'BALTIMORE COUNTY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 39.3167071, lng: -76.7365098 },
+    { name: 'ENOCH PRATT FREE LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 39.2945237, lng: -76.6173559 },
+    { name: 'UNIVERSITY OF MARYLAND, BALTIMORE COUNTY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.252377, lng: -76.7089181 },
+    { name: 'COMMUNITY COLLEGELEGE OF BALTIMORE CNTY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.2523207, lng: -76.7353196 },
+    { name: 'DELAWARE STATE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 39.1867993, lng: -75.5423583 },
+    { name: 'NATIONAL INSTITUTE OF STANDARDS AND TECHNOLOGY', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 39.1316116, lng: -77.2165406 },
+    { name: 'JOHN HOPKINS UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 39.1042151, lng: -77.2159391 },
+    { name: 'CAPE MAY COUNTY LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 39.0831314, lng: -74.8251127 },
+    { name: 'UNIVERSITY OF MARYLAND, EASTERN SHORE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.9904124, lng: -76.9438586 },
+    { name: 'UNIVERSITY OF MARYLAND, COLLEGE PARK', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.9784587, lng: -76.9282678 },
+    { name: 'AMERICAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 38.9377662, lng: -77.0894641 },
+    { name: 'AMERICAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.9377662, lng: -77.0894641 },
+    { name: 'HOWARD UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 38.9218972, lng: -77.0195931 },
+    { name: 'CARNEGIE ENDOWMENT FOR INTERNATIONAL PEACE', type: 'Corporate', address: '1779 Massachusetts Ave NW #810, Washington, DC 20036', layer: 'Who We Lend To', lat: 38.9091744, lng: -77.0411598 },
+    { name: 'GEORGETOWN UNIVERSITY, LAW LIBRARY', type: 'Law Library', address: '', layer: 'Who We Lend To', lat: 38.9089393, lng: -77.0745796 },
+    { name: 'GEORGE WASHINGTON UNIVERSITY, MEDICAL CENTER', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.899865, lng: -77.0474485 },
+    { name: 'US DEPT OF STATE, RALPH BUNCHE LIBRARY', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 38.8964128, lng: -77.0461077 },
+    { name: 'US EPA HEADQUARTERS AND CHEMICAL LIBRARIES', type: 'Federal/Natl Government', address: '1200 Pennsylvania Ave NW, Washington, DC', layer: 'Who We Lend To', lat: 38.8937155, lng: -77.028936 },
+    { name: 'FEDERAL TRADE COMMISSION LIBRARY', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 38.8926643, lng: -77.0209136 },
+    { name: 'PRINCE GEORGES COUNTY MEMORIAL LIBRARY SYSTEM', type: 'Public', address: '9601 Capital Lane, Largo, MD', layer: 'Who We Borrow From', lat: 38.891469, lng: -76.8386793 },
+    { name: 'PRINCE GEORGES CNTY MEMORIAL LIBRARY SYSTEM', type: 'Public', address: '9601 Capital Lane, Largo, MD', layer: 'Who We Lend To', lat: 38.891469, lng: -76.8386793 },
+    { name: 'FAIRFAX COUNTY PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 38.8839482, lng: -77.3025176 },
+    { name: 'NATIONAL DEFENSE UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 38.8647678, lng: -77.0167403 },
+    { name: 'GEORGE MASON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.8313333, lng: -77.3079884 },
+    { name: 'BEATLEY CENTRAL LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 38.8123993, lng: -77.1174991 },
+    { name: 'NATIONAL SCIENCE FOUNDATION', type: 'Federal/Natl Government', address: '2415 Eisenhower Avenue, Alexandria, Virginia. 22314', layer: 'Who We Lend To', lat: 38.8014548, lng: -77.0705232 },
+    { name: 'NATIONAL GEOSPATIAL-INTELLIGENCE AGENCY', type: 'Federal/Natl Government', address: '', layer: 'Who We Lend To', lat: 38.7521531, lng: -77.1956657 },
+    { name: 'LAUREL RIDGE COMMUNITY COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 38.6826904, lng: -77.7817496 },
+    { name: 'PRINCE WILLIAM PUBLIC LIBRARY SYSTEM', type: 'Public', address: '13083 Chinn Park Dr., Prince William, VA. 22192', layer: 'Who We Lend To', lat: 38.6713501, lng: -77.3347315 },
+    { name: 'JAMES MADISON UNIVERSITY LIBRARYS', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 38.4362412, lng: -78.8687576 },
+    { name: 'SAINT MARYS COLLEGE OF MARYLAND', type: 'Academic', address: 'St. Mary\'s City, Maryland', layer: 'Who We Lend To', lat: 38.1864921, lng: -76.43012 },
+    { name: 'UNIVERSITY OF VIRGINIA', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 38.0410576, lng: -78.5055084 },
+    { name: 'VIRGINIA MILITARY INSTITUTE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.7913339, lng: -79.4355152 },
+    { name: 'RANDOLPH-MACON COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.7625105, lng: -77.4795421 },
+    { name: 'UNIVERSITY OF RICHMOND', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.5758797, lng: -77.5412837 },
+    { name: 'LONGWOOD UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 37.3090314, lng: -78.4016795 },
+    { name: 'WILLIAM & MARY UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 37.2690934, lng: -76.7220509 },
+    { name: 'OLD DOMINION UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.8862699, lng: -76.3097248 },
+    { name: 'VIRGINIA WESLEYAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.86802, lng: -76.187744 },
+    { name: 'NORFOLK PUBLIC LIBRARY', type: 'Public', address: '1155 Pineridge Road, Norfolk, VA. 23502', layer: 'Who We Lend To', lat: 36.8609947, lng: -76.2296333 },
+    { name: 'TIDEWATER COMMUNITY COLLEGE, VIRGINIA BEACH CAMPUS', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 36.7846563, lng: -76.0986294 },
+    { name: 'ELON UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.1063398, lng: -79.5027368 },
+    { name: 'DURHAM COUNTY LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 36.0875876, lng: -78.9144571 },
+    { name: 'UNIVERSITY OF N CAROLINA GREENSBORO', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.0683549, lng: -79.8105812 },
+    { name: 'NORTH CAROLINA WESLEYAN UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 36.0154351, lng: -77.7749098 },
+    { name: 'UNIVERSITY OF NORTH CAROLINA, CHAPEL HILL', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.9046729, lng: -79.0533595 },
+    { name: 'MEREDITH COLLEGE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.7986587, lng: -78.6888239 },
+    { name: 'STATE LIBRARY OF NORTH CAROLINA', type: 'State Library', address: '109 E Jones St, Raleigh, NC', layer: 'Who We Lend To', lat: 35.7825918, lng: -78.6377775 },
+    { name: 'NORTH CAROLINA STATE UNIVERSITY AT RALEIGH', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 35.7718497, lng: -78.674087 },
+    { name: 'NORTH CAROLINA STATE UNIVERSITY AT RALEIGH LI', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.7718497, lng: -78.674087 },
+    { name: 'CAMPBELL UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.408071, lng: -78.7392468 },
+    { name: 'UNIVERSITY OF MOUNT OLIVE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 35.0959884, lng: -77.0853554 },
+    { name: 'UNIVERSITY OF NORTH CAROLINA AT PEMBROKE', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.6916696, lng: -79.2013896 },
+    { name: 'NEW HANOVER PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 34.238637, lng: -77.9471422 },
+    { name: 'UNIVERSITY OF N CAROLINA, WILMINGTON', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.2249827, lng: -77.8690774 },
+    { name: 'FRANCIS MARION UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 34.1912442, lng: -79.6666713 },
+    { name: 'MESSIAH COLLEGE', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 34.1866, lng: -77.8913 },
+    { name: 'COASTAL CAROLINA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 33.7953227, lng: -79.0126785 },
+    { name: 'HORRY COUNTY MEMORIAL LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 33.6973897, lng: -78.8770686 },
+    { name: 'PALM BEACH ATLANTIC UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 26.7035644, lng: -80.052993 },
+    { name: 'LYNN UNIVERSITY LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 26.3837711, lng: -80.1254028 },
+    { name: 'BROWARD COUNTY MAIN LIBRARY', type: 'Public', address: '', layer: 'Who We Borrow From', lat: 26.1209111, lng: -80.142995 },
+    { name: 'BROWARD COUNTY MAIN LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 26.1209111, lng: -80.142995 },
+    { name: 'NOVA SOUTHEASTERN UNIVERSITY LAW', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 26.0875789, lng: -80.1496886 },
+    { name: 'UNIVERSITY OF ROCHESTER', type: 'Academic', address: '', layer: 'Who We Borrow From', lat: 18.4020672, lng: -66.0615926 },
+    { name: 'UNIVERSITY OF ROCHESTER', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 18.4020672, lng: -66.0615926 },
+    { name: 'UNIVERSITY OF PUERTO RICO, MAYAGUEZ CAM LIBRARY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 18.4046351, lng: -66.0478486 },
+    { name: 'UNIVERSITY OF PUERTO RICO, RIO PIEDRAS CAM', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 18.4046351, lng: -66.0478486 },
+    { name: 'COLLEGE OF THE ATLANTIC', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 44.3940742, lng: -68.2199926 },
+    { name: 'BANGOR PUBLIC LIBRARY', type: 'Public', address: '', layer: 'Who We Lend To', lat: 44.8044556, lng: -68.7716817 },
+    { name: 'NORTHUMBRIA UNIVERSITY', type: 'Academic', address: '', layer: 'Who We Lend To', lat: 54.9787691, lng: -1.6096401 },
+  ]
+  .map(loc => ({ ...loc, color: TYPE_COLORS[loc.type] || "#8b949e" }));
+
+  // ─────────────────────────────────────────────
+  //  Map setup
+  // ─────────────────────────────────────────────
+  const map = L.map('map', {
+    center: [38.5, -96],
+    zoom: 4,
+    zoomControl: true
+  });
+
+  // Dark tile layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  // ─────────────────────────────────────────────
+  //  Active marker only — no static markers or route lines
+
+  // ─────────────────────────────────────────────
+  //  Active (pulse) marker
+  // ─────────────────────────────────────────────
+  function makePulseIcon(color) {
+    // Convert hex to rgba for the ring
+    const r = parseInt(color.slice(1,3),16);
+    const g = parseInt(color.slice(3,5),16);
+    const b = parseInt(color.slice(5,7),16);
+    return L.divIcon({
+      className: '',
+      html: `<div class="pulse-icon" style="--marker-color:${color};--marker-color-ring:rgba(${r},${g},${b},0.35)"></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+  }
+
+  const activeMarker = L.marker(
+    [locations[0].lat, locations[0].lng],
+    { icon: makePulseIcon(locations[0].color || '#58a6ff'), zIndexOffset: 1000 }
+  ).addTo(map);
+
+
+  // ─────────────────────────────────────────────
+  //  State
+  // ─────────────────────────────────────────────
+  let currentIndex = 0;
+  let isPlaying = true;
+  let intervalId  = null;
+  let zoomOutId   = null;   // timeout for the zoom-out step
+  let progressId  = null;
+  let progressVal = 0;
+
+  const CYCLE_MS   = 6000;  // total time per location
+  const ZOOM_IN    = 10;    // zoom level when arriving
+  const ZOOM_OUT   = 10;    // zoom level before leaving (same as ZOOM_IN — smooth pan only)
+  const ZOOM_OUT_AT = 3500; // ms after arrival to begin zoom-out
+  const TICK_MS    = 50;
+
+  // ─────────────────────────────────────────────
+  //  Go to a stop
+  // ─────────────────────────────────────────────
+  function goTo(index) {
+    currentIndex = (index + locations.length) % locations.length;
+    const loc = locations[currentIndex];
+
+    // Move marker, update color to match library type, and fly in
+    activeMarker.setLatLng([loc.lat, loc.lng]);
+    activeMarker.setIcon(makePulseIcon(loc.color || '#58a6ff'));
+    map.flyTo([loc.lat, loc.lng], ZOOM_IN, { animate: true, duration: 1.8 });
+
+    // Update info panel
+    document.getElementById('current-location').textContent = loc.name;
+    document.getElementById('current-type').textContent =
+      `${loc.type}${loc.address ? ' — ' + loc.address : ''}`;
+    document.getElementById('step-counter').textContent =
+      `Stop ${currentIndex + 1} of ${locations.length}`;
+
+    // Reset progress bar
+    progressVal = 0;
+    document.getElementById('progress-bar').style.width = '0%';
+  }
+
+  function nextStop() { goTo(currentIndex + 1); }
+
+  // ─────────────────────────────────────────────
+  //  Zoom-out step (fires mid-cycle)
+  // ─────────────────────────────────────────────
+  function scheduleZoomOut() {
+    clearTimeout(zoomOutId);
+    zoomOutId = setTimeout(() => {
+      if (isPlaying) {
+        const loc = locations[currentIndex];
+        map.flyTo([loc.lat, loc.lng], ZOOM_OUT, { animate: true, duration: 1.2 });
+      }
+    }, ZOOM_OUT_AT);
+  }
+
+  // ─────────────────────────────────────────────
+  //  Progress bar tick
+  // ─────────────────────────────────────────────
+  function startProgress() {
+    clearInterval(progressId);
+    progressVal = 0;
+    progressId = setInterval(() => {
+      progressVal += (TICK_MS / CYCLE_MS) * 100;
+      if (progressVal > 100) progressVal = 100;
+      document.getElementById('progress-bar').style.width = progressVal + '%';
+    }, TICK_MS);
+  }
+
+  // ─────────────────────────────────────────────
+  //  Play / pause
+  // ─────────────────────────────────────────────
+  function play() {
+    isPlaying = true;
+    document.getElementById('btn-play').textContent = '⏸ Pause';
+    document.getElementById('btn-play').classList.add('active');
+    intervalId = setInterval(() => {
+      nextStop();
+      startProgress();
+      scheduleZoomOut();
+    }, CYCLE_MS);
+    startProgress();
+    scheduleZoomOut();
+  }
+
+  function pause() {
+    isPlaying = false;
+    document.getElementById('btn-play').textContent = '▶ Play';
+    document.getElementById('btn-play').classList.remove('active');
+    clearInterval(intervalId);
+    clearInterval(progressId);
+    clearTimeout(zoomOutId);
+  }
+
+  // ─────────────────────────────────────────────
+  //  Button handlers
+  // ─────────────────────────────────────────────
+  document.getElementById('btn-play').addEventListener('click', () => {
+    isPlaying ? pause() : play();
+  });
+
+  document.getElementById('btn-next').addEventListener('click', () => {
+    if (isPlaying) { pause(); }
+    nextStop();
+  });
+
+  document.getElementById('btn-prev').addEventListener('click', () => {
+    if (isPlaying) { pause(); }
+    goTo(currentIndex - 1);
+  });
+
+  // ─────────────────────────────────────────────
+  //  Init
+  // ─────────────────────────────────────────────
+  goTo(0);
+  play();
+</script>
+
+<!-- Override Leaflet tooltip default style -->
+<style>
+  .leaflet-tooltip-dark {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+  .leaflet-tooltip-dark::before {
+    border-top-color: #30363d;
+  }
+</style>
+
+</body>
+</html>
