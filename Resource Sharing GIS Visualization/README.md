@@ -57,7 +57,7 @@ All 770 institutions are geocoded and shown on the map — matching the original
 
 ## Library Types & Colors
 
-The active marker and its pulse ring change color at every stop to match the library type. These colors also appear in the on-screen legend.
+The active marker and its pulse ring change color at every stop to match the library type. These colors appear in the on-screen legend. The former "Active Stop" fixed-blue entry has been removed — the marker color is already represented by whichever type entry is currently active.
 
 | Type | Color |
 |------|-------|
@@ -147,4 +147,4 @@ To add new libraries:
 **Author:** Tokunbo Adeshina Jr.
 **Institution:** Bronx Community College (BCC), CUNY
 **Email:** adetokunbojunior@gmail.com
-**Version:** 7.0 — May 2026
+**Version:** 8.0 — May 2026
