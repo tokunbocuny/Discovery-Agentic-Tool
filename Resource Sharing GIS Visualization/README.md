@@ -9,7 +9,7 @@ Interactive animated map of BCC's interlibrary loan (ILL) and resource-sharing p
 
 A standalone HTML map that cycles through **770 partner library locations** with a pulsing marker that pans smoothly between stops. Built for presentations, lobby displays, and library communications.
 
-- Dark-themed world map (CartoDB Dark Matter + Leaflet.js)
+- Full-colour world map (CartoDB Voyager + Leaflet.js) with roads, labels, and geographic detail
 - Locations sequenced geographically — west-to-east sweep across the US, no chaotic jumps
 - Single active marker — color matches the library type legend at every stop
 - Pulse ring inherits the same type color at 35% opacity
@@ -147,4 +147,4 @@ To add new libraries:
 **Author:** Tokunbo Adeshina Jr.
 **Institution:** Bronx Community College (BCC), CUNY
 **Email:** adetokunbojunior@gmail.com
-**Version:** 8.0 — May 2026
+**Version:** 9.0 — May 2026

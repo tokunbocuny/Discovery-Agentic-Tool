@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Primo Discovery Tool — BCC / CUNY OneSearch</title>
+  <style>
+    /* ── Reset & base ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #1F2E47;
+      --navy-light: #2A3F60;
+      --navy-card:  #243351;
+      --teal:       #1DE7D8;
+      --cyan:       #34B9DF;
+      --sky:        #42A6E3;
+      --white:      #FFFFFF;
+      --off-white:  #E8F0F8;
+      --muted:      #8BAAC8;
+      --danger:     #FF6B6B;
+      --success:    #4DD9AC;
+      --code-bg:    #141E2E;
+      --radius:     8px;
+      --radius-lg:  14px;
+    }
+
+    body {
+      font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      background: var(--navy-light);
+      border-bottom: 3px solid var(--teal);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .header-accent {
+      width: 5px;
+      height: 52px;
+      background: linear-gradient(180deg, var(--teal), var(--cyan));
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 0.02em;
+    }
+
+    header p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .badge {
+      margin-left: auto;
+      background: var(--teal);
+      color: var(--navy);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 36px 24px 60px;
+    }
+
+    /* ── Section labels ─────────────────────────────────────────────────── */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 8px;
+    }
+
+    /* ── Search card ─────────────────────────────────────────────────────── */
+    .search-card {
+      background: var(--navy-card);
+      border: 1px solid var(--navy-light);
+      border-radius: var(--radius-lg);
+      padding: 28px 28px 24px;
+      margin-bottom: 28px;
+    }
+
+    .search-card h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--off-white);
+      margin-bottom: 18px;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--navy);
+      border: 2px solid var(--navy-light);
+      border-radius: var(--radius);
+      color: var(--white);
+      font-family: inherit;
+      font-size: 1.05rem;
+      padding: 14px 16px;
+      resize: vertical;
+      min-height: 80px;
+      transition: border-color 0.2s;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--teal);
+    }
+
+    textarea::placeholder { color: var(--muted); }
+
+    /* ── Config row ──────────────────────────────────────────────────────── */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .config-field label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 5px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .config-field input {
+      width: 100%;
+      background: var(--navy);
+      border: 1.5px solid var(--navy-light);
+      border-radius: var(--radius);
+      color: var(--white);
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      transition: border-color 0.2s;
+    }
+
+    .config-field input:focus {
+      outline: none;
+      border-color: var(--cyan);
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: inherit;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      font-size: 0.95rem;
+    }
+
+    button:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--teal), var(--cyan));
+      color: var(--navy);
+      padding: 11px 28px;
+    }
+
+    .btn-secondary {
+      background: var(--navy-light);
+      color: var(--off-white);
+      border: 1.5px solid var(--navy-light);
+      padding: 10px 20px;
+    }
+
+    .btn-secondary:hover { border-color: var(--muted); }
+    .btn-primary:hover { opacity: 0.88; }
+
+    /* ── Pipeline steps ──────────────────────────────────────────────────── */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 28px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .step-pill {
+      background: var(--navy-card);
+      border: 1.5px solid var(--navy-light);
+      border-radius: 6px;
+      padding: 8px 14px;
+      text-align: center;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .step-pill .step-num {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--teal);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: block;
+    }
+
+    .step-pill .step-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--off-white);
+    }
+
+    .step-arrow {
+      color: var(--muted);
+      font-size: 1.1rem;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Result panels ──────────────────────────────────────────────────── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 680px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+
+    .result-panel {
+      background: var(--navy-card);
+      border: 1.5px solid var(--navy-light);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .result-panel.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .panel-header {
+      background: var(--navy-light);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-header .step-badge {
+      background: var(--teal);
+      color: var(--navy);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .panel-header h3 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--off-white);
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    /* Concepts list */
+    .concepts-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .concept-tag {
+      background: var(--navy);
+      border: 1.5px solid var(--teal);
+      color: var(--teal);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .no-concepts {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid #2A3A55;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: var(--off-white);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .code-block .kw-or  { color: var(--cyan); font-weight: 700; }
+    .code-block .kw-and { color: var(--teal); font-weight: 700; }
+    .code-block .kw-str { color: #A8D8A8; }
+
+    /* API results */
+    .api-results { display: flex; flex-direction: column; gap: 12px; }
+
+    .result-item {
+      background: var(--navy);
+      border: 1px solid var(--navy-light);
+      border-left: 3px solid var(--teal);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+    }
+
+    .result-item .result-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--off-white);
+      margin-bottom: 4px;
+    }
+
+    .result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .meta-chip {
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: var(--navy-light);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .result-link {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--cyan);
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    .result-link:hover { color: var(--teal); }
+
+    /* Status states */
+    .status-box {
+      text-align: center;
+      padding: 24px 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .status-box.loading { color: var(--cyan); }
+    .status-box.error   { color: var(--danger); }
+    .status-box.success { color: var(--success); }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid var(--navy-light);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Primo q= display */
+    .primo-q {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.8rem;
+      background: var(--code-bg);
+      border: 1px solid #2A3A55;
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      color: #A8D8A8;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+
+    /* CORS notice */
+    .cors-notice {
+      background: #2A1E0A;
+      border: 1px solid #8B6A1A;
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 0.82rem;
+      color: #F5C842;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .cors-notice strong { color: #FFD966; }
+
+    /* Total count */
+    .total-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0 12px;
+      border-bottom: 1px solid var(--navy-light);
+      margin-bottom: 12px;
+    }
+
+    .total-bar .total-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .total-bar .total-count {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--teal);
+    }
+
+    /* Examples bar */
+    .examples-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .example-chip {
+      background: var(--navy);
+      border: 1.5px solid var(--navy-light);
+      color: var(--muted);
+      font-size: 0.78rem;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      font-family: inherit;
+    }
+
+    .example-chip:hover {
+      border-color: var(--cyan);
+      color: var(--off-white);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--navy-light);
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-top: 20px;
+    }
+
+    footer a { color: var(--cyan); }
+
+    /* Skip nav (WCAG) */
+    .skip-nav {
+      position: absolute;
+      left: -9999px;
+      top: auto;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+
+    .skip-nav:focus {
+      position: static;
+      width: auto;
+      height: auto;
+      background: var(--teal);
+      color: var(--navy);
+      padding: 8px 16px;
+      font-weight: 700;
+      border-radius: 4px;
+    }
+
+    /* Focus styles (WCAG 2.2 §2.4.11) */
+    :focus-visible {
+      outline: 3px solid var(--teal);
+      outline-offset: 2px;
+    }
+
+    /* Hidden utility */
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+
+<a href="#search-input" class="skip-nav">Skip to search</a>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header role="banner">
+  <div class="header-accent" aria-hidden="true"></div>
+  <div>
+    <h1>Primo Discovery Tool</h1>
+    <p>Bronx Community College Library &mdash; CUNY OneSearch API</p>
+  </div>
+  <span class="badge" aria-label="Version 1.0">v1.0</span>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main id="main-content">
+
+  <!-- Pipeline overview -->
+  <nav aria-label="Search pipeline steps" style="margin-bottom:28px; margin-top:8px;">
+    <div class="pipeline" role="list">
+      <div class="step-pill" role="listitem">
+        <span class="step-num">Step 1</span>
+        <span class="step-name">Concept Extraction</span>
+      </div>
+      <span class="step-arrow" aria-hidden="true">›</span>
+      <div class="step-pill" role="listitem">
+        <span class="step-num">Step 2</span>
+        <span class="step-name">Boolean String</span>
+      </div>
+      <span class="step-arrow" aria-hidden="true">›</span>
+      <div class="step-pill" role="listitem">
+        <span class="step-num">Step 3</span>
+        <span class="step-name">API Query String</span>
+      </div>
+      <span class="step-arrow" aria-hidden="true">›</span>
+      <div class="step-pill" role="listitem">
+        <span class="step-num">Step 4</span>
+        <span class="step-name">API Request</span>
+      </div>
+      <span class="step-arrow" aria-hidden="true">›</span>
+      <div class="step-pill" role="listitem">
+        <span class="step-num">Step 5</span>
+        <span class="step-name">Results</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Search card ────────────────────────────────────────────────────── -->
+  <section class="search-card" aria-labelledby="search-heading">
+    <h2 id="search-heading">Search CUNY OneSearch</h2>
+
+    <label for="search-input" class="section-label">Research Phrase</label>
+    <textarea
+      id="search-input"
+      rows="3"
+      placeholder="e.g. interlibrary loan trends in discovery systems at community colleges"
+      aria-describedby="phrase-hint"
+    ></textarea>
+    <p id="phrase-hint" class="visually-hidden">
+      Enter a natural language research phrase. The tool will extract concepts, build a boolean search string, and query CUNY OneSearch.
+    </p>
+
+    <!-- Example phrases -->
+    <div style="margin-top:10px;">
+      <p class="section-label" id="examples-label">Example Phrases</p>
+      <div class="examples-bar" role="list" aria-labelledby="examples-label">
+        <button class="example-chip" role="listitem"
+          onclick="setPhrase(this.textContent)"
+          aria-label="Use example: interlibrary loan trends in discovery systems">
+          interlibrary loan trends in discovery systems
+        </button>
+        <button class="example-chip" role="listitem"
+          onclick="setPhrase(this.textContent)"
+          aria-label="Use example: Alma analytics resource sharing metrics">
+          Alma analytics resource sharing metrics
+        </button>
+        <button class="example-chip" role="listitem"
+          onclick="setPhrase(this.textContent)"
+          aria-label="Use example: access services workflows in academic libraries">
+          access services workflows in academic libraries
+        </button>
+        <button class="example-chip" role="listitem"
+          onclick="setPhrase(this.textContent)"
+          aria-label="Use example: copyright fair use course reserves">
+          copyright fair use course reserves
+        </button>
+      </div>
+    </div>
+
+    <!-- Search options (limit + sort only — credentials come from .env via server) -->
+    <div class="config-grid" style="margin-top:16px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+      <div class="config-field">
+        <label for="cfg-limit">Results Limit</label>
+        <input id="cfg-limit" type="number" value="5" min="1" max="50"
+          aria-label="Number of results to return (max 50)" />
+      </div>
+      <div class="config-field">
+        <label for="cfg-sort">Sort Order</label>
+        <select id="cfg-sort" style="width:100%; background:var(--navy);
+          border:1.5px solid var(--navy-light); border-radius:var(--radius);
+          color:var(--white); font-family:inherit; font-size:0.85rem; padding:8px 12px;"
+          aria-label="Sort order for results">
+          <option value="rank">Relevance (rank)</option>
+          <option value="date_d">Newest First (date_d)</option>
+          <option value="date_a">Oldest First (date_a)</option>
+          <option value="title">Title (A–Z)</option>
+          <option value="author">Author (A–Z)</option>
+        </select>
+      </div>
+      <div class="config-field" style="display:flex; align-items:flex-end;">
+        <div id="server-status" style="font-size:0.75rem; padding:8px 0; color:var(--muted);"
+          role="status" aria-live="polite">
+          Checking server&hellip;
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="runSearch()"
+        aria-label="Run search: extract concepts, build boolean string, and query API">
+        &#9654; Run Search
+      </button>
+      <button class="btn-secondary" onclick="clearAll()"
+        aria-label="Clear all inputs and results">
+        Clear
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Results area ─────────────────────────────────────────────────── -->
+  <div id="results-area" aria-live="polite" aria-atomic="false">
+    <!-- Populated by JS -->
+  </div>
+
+</main>
+
+<footer role="contentinfo">
+  Bronx Community College Library &mdash; Primo Discovery Tool v1.0 &mdash; May 2026 &bull;
+  Author: Tokunbo Adeshina Jr. &bull;
+  <a href="https://developers.exlibrisgroup.com/primo/apis/search/"
+    target="_blank" rel="noopener noreferrer"
+    aria-label="Primo VE API documentation (opens in new tab)">
+    Primo VE API Docs
+  </a>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+/* ── Server state ────────────────────────────────────────────────────── */
+const SERVER_BASE = "http://localhost:8766";
+let _serverConfigured = false;
+
+async function checkServerStatus() {
+  const el = document.getElementById("server-status");
+  try {
+    const resp = await fetch(`${SERVER_BASE}/api/config`, { signal: AbortSignal.timeout(2000) });
+    if (!resp.ok) throw new Error("bad status");
+    const cfg = await resp.json();
+    _serverConfigured = cfg.configured;
+    el.textContent = cfg.configured
+      ? `✅ Server ready — VID: ${cfg.vid}`
+      : "⚠️ Server running but API key not set in .env";
+    el.style.color = cfg.configured ? "var(--success)" : "var(--danger)";
+  } catch {
+    _serverConfigured = false;
+    el.innerHTML = `⚠️ Server offline — run <code style="font-size:0.75rem;">python primo_server.py</code>`;
+    el.style.color = "var(--muted)";
+  }
+}
+
+/* ── Synonym map (mirrors primo_connector.py exactly) ─────────────────── */
+const SYNONYM_MAP = {
+  // Generational / Student Demographics
+  "millennial"         : ["millennial", "millennials", "Generation Y", "Gen Y",
+                          "digital native", "digital natives", "Net Generation"],
+  "generation y"       : ["Generation Y", "Gen Y", "millennial", "millennials",
+                          "digital native", "Net Generation"],
+  "generation z"       : ["Generation Z", "Gen Z", "iGeneration",
+                          "post-millennial", "centennial"],
+
+  // Pedagogy / Instruction
+  "addressing"         : ["pedagogy", "teaching strategies", "instructional strategies",
+                          "student engagement", "curriculum", "active learning"],
+  "pedagogy"           : ["pedagogy", "teaching", "instruction", "instructional strategies",
+                          "teaching strategies", "learning styles", "active learning",
+                          "student engagement", "flipped classroom",
+                          "student-centered learning", "technology-enhanced learning"],
+  "teaching"           : ["teaching", "pedagogy", "instruction", "instructional strategies",
+                          "teaching strategies", "learning styles", "active learning",
+                          "student engagement", "curriculum design"],
+  "active learning"    : ["active learning", "flipped classroom", "problem-based learning",
+                          "inquiry-based learning", "collaborative learning",
+                          "peer learning", "student-centered learning"],
+  "learning styles"    : ["learning styles", "learning preferences", "learning approaches",
+                          "student learning", "academic achievement"],
+  "engagement"         : ["student engagement", "active learning", "participation",
+                          "motivation", "retention", "persistence"],
+
+  // Educational Levels
+  "undergraduate"      : ["undergraduate", "higher education", "post-secondary",
+                          "college", "university", "introductory course",
+                          "general chemistry", "introductory chemistry"],
+  "higher education"   : ["higher education", "undergraduate", "post-secondary",
+                          "college education", "university education", "tertiary education"],
+  "graduate"           : ["graduate", "postgraduate", "doctoral", "master's",
+                          "PhD", "advanced degree"],
+
+  // STEM / Science Disciplines
+  "chemistry"          : ["chemistry", "chemical education", "chemistry education",
+                          "STEM education", "science education",
+                          "organic chemistry", "general chemistry"],
+  "stem"               : ["STEM", "STEM education", "science education",
+                          "mathematics education", "engineering education",
+                          "technology education"],
+  "biology"            : ["biology", "biological sciences", "life sciences",
+                          "STEM education", "science education"],
+  "physics"            : ["physics", "physical sciences", "STEM education",
+                          "science education"],
+  "mathematics"        : ["mathematics", "math", "calculus", "statistics",
+                          "quantitative reasoning", "STEM education"],
+
+  // Resource Sharing / ILL
+  "interlibrary loan"  : ["interlibrary loan", "ILL", "resource sharing", "document delivery"],
+  "resource sharing"   : ["resource sharing", "interlibrary loan", "ILL", "document delivery"],
+  "document delivery"  : ["document delivery", "interlibrary loan", "ILL"],
+
+  // Discovery Systems
+  "discovery"          : ["discovery systems", "discovery layer", "web-scale discovery",
+                          "Primo", "Summon", "EBSCO Discovery Service"],
+  "discovery systems"  : ["discovery systems", "discovery layer", "web-scale discovery"],
+
+  // Library Management
+  "alma"               : ["Alma", "Ex Libris Alma", "library management system", "LMS", "ILS"],
+  "analytics"          : ["analytics", "metrics", "reporting", "data analysis", "dashboard"],
+  "access services"    : ["access services", "circulation", "reserves", "course reserves"],
+
+  // Copyright / Scholarly Communication
+  "copyright"          : ["copyright", "intellectual property", "copyright law"],
+  "fair use"           : ["fair use", "fair dealing", "copyright exemption"],
+
+  // Academic Library Types
+  "academic library"   : ["academic library", "university library", "college library",
+                          "research library"],
+  "community college"  : ["community college", "two-year college", "junior college",
+                          "community college library"],
+
+  // Outcomes / Impact
+  "impact"             : ["impact", "effect", "outcome", "influence"],
+  "trend"              : ["trend", "trends", "pattern", "change over time"],
+  "efficiency"         : ["efficiency", "effectiveness", "performance", "workflow"],
+};
+
+/* ── Step 1: Concept extraction ─────────────────────────────────────── */
+function extractConcepts(phrase) {
+  const lower = phrase.toLowerCase();
+  const sortedKeys = Object.keys(SYNONYM_MAP).sort((a, b) => b.length - a.length);
+  const matched = [];
+  const usedSpans = [];
+
+  for (const key of sortedKeys) {
+    let idx = lower.indexOf(key);
+    if (idx === -1) continue;
+    const end = idx + key.length;
+    const overlap = usedSpans.some(([s, e]) => !(end <= s || idx >= e));
+    if (!overlap) {
+      matched.push(key);
+      usedSpans.push([idx, end]);
+    }
+  }
+  return matched;
+}
+
+/* ── Step 2: Boolean string ──────────────────────────────────────────── */
+function buildBooleanString(concepts) {
+  if (!concepts.length) return "";
+  const groups = concepts.map(concept => {
+    const synonyms = SYNONYM_MAP[concept] || [concept];
+    const quoted = synonyms.map(s => s.includes(" ") ? `"${s}"` : s);
+    const group = quoted.join(" OR ");
+    return quoted.length > 1 ? `(${group})` : group;
+  });
+  return groups.join("\nAND ");
+}
+
+/* ── Step 3: Primo API query string ──────────────────────────────────── */
+function buildPrimoQuery(concepts, rawPhrase) {
+  if (!concepts.length) {
+    return `any,contains,${rawPhrase.replace(/"/g, "").trim()}`;
+  }
+  // Space-joined canonical terms inside a single any,contains segment.
+  // The pipe-delimited AND format returns 0 results on this CUNY instance;
+  // space separation is treated as implicit AND by Primo VE.
+  const primaries = concepts.map(c => (SYNONYM_MAP[c] || [c])[0].replace(/"/g, ""));
+  return `any,contains,${primaries.join(" ")}`;
+}
+
+/* ── Syntax highlight boolean string ────────────────────────────────── */
+function highlightBoolean(str) {
+  return str
+    .replace(/\bOR\b/g, '<span class="kw-or">OR</span>')
+    .replace(/\bAND\b/g, '<span class="kw-and">AND</span>')
+    .replace(/"([^"]+)"/g, '"<span class="kw-str">$1</span>"');
+}
+
+/* ── Step 4+5: Proxy search through local server ─────────────────────── */
+async function queryPrimo(primoQ, config) {
+  const url = new URL(`${SERVER_BASE}/api/search`);
+  url.searchParams.set("q",      primoQ);
+  url.searchParams.set("limit",  config.limit);
+  url.searchParams.set("offset", "0");
+  url.searchParams.set("sort",   config.sort);
+
+  const response = await fetch(url.toString());
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || data.error || `HTTP ${response.status}`);
+  }
+  return data;
+}
+
+/* ── Render a single API result record ──────────────────────────────── */
+function renderRecord(doc, index) {
+  const pnx     = doc.pnx || {};
+  const display = pnx.display || {};
+  const control = pnx.control || {};
+
+  const title    = (display.title    || ["[No title]"])[0];
+  const creator  = (display.creator  || [""])[0];
+  const date     = (display.creationdate || [""])[0];
+  const rtype    = (display.type     || [""])[0];
+  const source   = (display.source   || [""])[0];
+  const recId    = (control.recordid || [""])[0];
+  const links    = doc.delivery?.GetIt1?.[0]?.links || [];
+  const deepLink = links[0]?.link || "";
+
+  const chips = [creator, date, rtype, source]
+    .filter(Boolean)
+    .map(v => `<span class="meta-chip">${escHtml(v)}</span>`)
+    .join("");
+
+  const linkHtml = deepLink
+    ? `<a class="result-link" href="${escHtml(deepLink)}" target="_blank"
+         rel="noopener noreferrer"
+         aria-label="View full record for ${escHtml(title)} in CUNY OneSearch (opens in new tab)">
+         View in CUNY OneSearch &rarr;</a>`
+    : "";
+
+  return `
+    <article class="result-item" aria-label="Result ${index}: ${escHtml(title)}">
+      <div class="result-title">${index}. ${escHtml(title)}</div>
+      <div class="result-meta">${chips}</div>
+      ${recId ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">ID: ${escHtml(recId)}</div>` : ""}
+      ${linkHtml}
+    </article>`;
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/* ── Main search handler ─────────────────────────────────────────────── */
+async function runSearch() {
+  const phrase = document.getElementById("search-input").value.trim();
+  if (!phrase) {
+    document.getElementById("search-input").focus();
+    return;
+  }
+
+  const config = {
+    limit: document.getElementById("cfg-limit").value || "5",
+    sort:  document.getElementById("cfg-sort").value  || "rank",
+  };
+
+  /* Steps 1–3 are synchronous */
+  const concepts     = extractConcepts(phrase);
+  const booleanStr   = concepts.length ? buildBooleanString(concepts) : `"${phrase}"`;
+  const primoQ       = buildPrimoQuery(concepts, phrase);
+
+  /* Render steps 1–3 immediately */
+  const conceptsHtml = concepts.length
+    ? concepts.map(c => `<span class="concept-tag" role="listitem">${escHtml(c)}</span>`).join("")
+    : `<span class="no-concepts">No mapped concepts found — using raw phrase fallback.</span>`;
+
+  document.getElementById("results-area").innerHTML = `
+    <div class="results-grid">
+
+      <!-- Step 1: Concepts -->
+      <div class="result-panel">
+        <div class="panel-header">
+          <span class="step-badge" aria-label="Step 1">Step 1</span>
+          <h3>Concepts Extracted</h3>
+        </div>
+        <div class="panel-body">
+          <div class="concepts-list" role="list" aria-label="Identified concepts">
+            ${conceptsHtml}
+          </div>
+          <p style="font-size:0.78rem;color:var(--muted);margin-top:10px;">
+            ${concepts.length} concept${concepts.length !== 1 ? "s" : ""} matched from 15 built-in categories
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 3: Primo q= -->
+      <div class="result-panel">
+        <div class="panel-header">
+          <span class="step-badge" aria-label="Step 3">Step 3</span>
+          <h3>Primo API q= Parameter</h3>
+        </div>
+        <div class="panel-body">
+          <div class="primo-q" aria-label="Primo API query string">${escHtml(primoQ)}</div>
+          <p style="font-size:0.75rem;color:var(--muted);margin-top:8px;">
+            Flat pipe-delimited format — one canonical term per concept, joined by AND.
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 2: Boolean string (full width) -->
+      <div class="result-panel full-width">
+        <div class="panel-header">
+          <span class="step-badge" aria-label="Step 2">Step 2</span>
+          <h3>Human-Readable Boolean String</h3>
+        </div>
+        <div class="panel-body">
+          <div class="code-block" role="region" aria-label="Boolean search string">${highlightBoolean(escHtml(booleanStr))}</div>
+        </div>
+      </div>
+
+      <!-- Step 4+5: API results (full width) -->
+      <div class="result-panel full-width" id="api-results-panel">
+        <div class="panel-header">
+          <span class="step-badge" aria-label="Steps 4 and 5">Steps 4–5</span>
+          <h3>API Results — CUNY OneSearch</h3>
+        </div>
+        <div class="panel-body" id="api-results-body">
+          <div class="status-box loading" role="status" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>Querying CUNY OneSearch&hellip;
+          </div>
+        </div>
+      </div>
+
+    </div>`;
+
+  /* Step 4+5: Always attempt the API call — catch block handles a dead server */
+
+  try {
+    const data   = await queryPrimo(primoQ, config);
+    const info   = data.info || {};
+    const docs   = data.docs || [];
+    const total  = info.total || 0;
+
+    const body = document.getElementById("api-results-body");
+    if (!docs.length) {
+      body.innerHTML = `<div class="status-box">No records returned. Try broadening the phrase or checking your VID/scope settings.</div>`;
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="total-bar">
+        <span class="total-label">Total records found</span>
+        <span class="total-count" aria-label="${total} total results">${Number(total).toLocaleString()}</span>
+      </div>
+      <div class="api-results" role="list" aria-label="Search results">
+        ${docs.map((doc, i) => renderRecord(doc, i + 1)).join("")}
+      </div>`;
+
+  } catch (err) {
+    const body = document.getElementById("api-results-body");
+    const isOffline = err.message.includes("Failed to fetch") || err.message.includes("NetworkError");
+    body.innerHTML = `
+      <div class="cors-notice" role="alert">
+        <strong>${isOffline ? "Server not reachable" : "API Error"}:</strong>
+        ${isOffline
+          ? `Run <code>python primo_server.py</code> in the Primo Discovery Tool folder, then search again.`
+          : escHtml(err.message)}
+      </div>`;
+  }
+}
+
+/* ── Utilities ───────────────────────────────────────────────────────── */
+function setPhrase(text) {
+  document.getElementById("search-input").value = text.trim();
+  document.getElementById("search-input").focus();
+}
+
+function clearAll() {
+  document.getElementById("search-input").value = "";
+  document.getElementById("results-area").innerHTML = "";
+  document.getElementById("search-input").focus();
+}
+
+/* Run on Enter key (Ctrl/Cmd + Enter in textarea) */
+document.getElementById("search-input").addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    runSearch();
+  }
+});
+
+/* Check server status on load */
+checkServerStatus();
+</script>
+
+</body>
+</html>

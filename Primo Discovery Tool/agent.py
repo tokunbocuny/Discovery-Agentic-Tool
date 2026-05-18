@@ -42,6 +42,8 @@ from primo_connector import (
     extract_concepts,
     build_boolean_string,
     build_primo_query,
+    get_unmapped_words,
+    update_synonym_map,
     SYNONYM_MAP,
 )
 
@@ -227,6 +229,77 @@ def serialize_results(raw: dict) -> list[dict]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Auto synonym generation  (called when 0 concepts are extracted)
+# ══════════════════════════════════════════════════════════════════════════════
+
+async def _suggest_synonyms(words: list[str]) -> dict[str, list[str]]:
+    """
+    Ask the Claude CLI to propose academic synonyms for unmapped words.
+    Falls back to single-entry identity map if the CLI is unavailable.
+
+    Returns {lowercase_word: [synonym, ...]}
+    """
+    if not words:
+        return {}
+
+    binary = _find_claude_binary()
+    if not binary:
+        return {w: [w] for w in words}
+
+    word_list = ", ".join(f'"{w}"' for w in words)
+    prompt = (
+        "You are building a synonym map for an academic library search tool at "
+        "Bronx Community College (CUNY).\n\n"
+        f"The following words appeared in a search phrase but were not recognized "
+        f"as known academic concepts: {word_list}\n\n"
+        "For each word, provide 4–6 synonyms or closely related academic terms "
+        "a researcher might use in a literature search. Favour terms that appear "
+        "in journal article titles and abstracts.\n\n"
+        "Respond with ONLY a valid JSON object — no explanation, no markdown:\n"
+        '{\n  "word": ["synonym1", "synonym2", "synonym3", "synonym4"]\n}'
+    )
+
+    clean_env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            binary, "--print", "--output-format", "text",
+            "--permission-mode", "dontAsk", prompt,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=clean_env,
+        )
+        try:
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+        except asyncio.TimeoutError:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+            return {w: [w] for w in words}
+
+        text = re.sub(
+            r"\x1b\[[0-9;]*[mGKHF]", "",
+            stdout.decode("utf-8", errors="replace")
+        ).strip()
+
+        # Extract the first {...} block from the response
+        json_match = re.search(r"\{.*\}", text, re.DOTALL)
+        if json_match:
+            data = json.loads(json_match.group())
+            return {
+                k.lower().strip(): [str(s) for s in v]
+                for k, v in data.items()
+                if isinstance(v, list) and v
+            }
+
+    except Exception:
+        pass
+
+    return {w: [w] for w in words}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Claude CLI summary generation
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -345,11 +418,21 @@ async def run_search(
     # Step 0 — Spell-correct the query before anything else
     corrected_query, correction_note = correct_query(query)
 
-    # Step 1 — Build both query representations
-    concepts    = extract_concepts(corrected_query)
-    # Human-readable boolean (shown in UI panel, uses synonym expansion)
+    # Step 1 — Extract concepts; if none found, auto-expand the synonym map
+    concepts   = extract_concepts(corrected_query)
+    map_updates: list[dict] = []
+
+    if not concepts:
+        unmapped = get_unmapped_words(corrected_query)
+        if unmapped:
+            new_entries = await _suggest_synonyms(unmapped)
+            for key, synonyms in new_entries.items():
+                update_synonym_map(key, synonyms)
+                map_updates.append({"key": key, "synonyms": synonyms})
+            # Re-extract now that the map has new entries
+            concepts = extract_concepts(corrected_query)
+
     boolean_str = build_boolean_string(concepts) if concepts else f'"{corrected_query}"'
-    # Actual Primo VE q= parameter (one primary term per concept, AND-joined only)
     primo_query = build_primo_query(concepts, raw_phrase=corrected_query)
 
     # Step 2 — Search Primo VE
@@ -368,6 +451,7 @@ async def run_search(
             "summary":          "",
             "corrected_query":  corrected_query if corrected_query != query else None,
             "correction_note":  correction_note,
+            "map_updates":      map_updates,
             "error":            f"{raw['error']}: {raw.get('detail', '')}",
         }
 
@@ -386,5 +470,6 @@ async def run_search(
         "summary":          summary,
         "corrected_query":  corrected_query if corrected_query != query else None,
         "correction_note":  correction_note,
+        "map_updates":      map_updates,
         "error":            None,
     }

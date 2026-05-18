@@ -58,9 +58,9 @@ app.add_middleware(
     allow_headers      = ["*"],
 )
 
-# Jinja2 templates (looks for ./templates/)
+# Jinja2 templates — templates/ lives at the project root, one level up
 templates = Jinja2Templates(
-    directory=os.path.join(os.path.dirname(__file__), "templates")
+    directory=os.path.join(os.path.dirname(__file__), "..", "templates")
 )
 
 
@@ -110,7 +110,7 @@ class SearchResponse(BaseModel):
 @app.get("/", include_in_schema=False)
 async def index(request: Request):
     """Serve the search UI."""
-    return templates.TemplateResponse("search.html", {"request": request})
+    return templates.TemplateResponse(request, "search.html")
 
 
 @app.post("/search", response_model=SearchResponse)

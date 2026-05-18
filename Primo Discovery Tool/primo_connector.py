@@ -23,6 +23,7 @@ import re
 import json
 import time
 import requests
+from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -57,36 +58,162 @@ DEFAULT_OFFSET = 0
 # Synonym map: extend this dictionary with your own domain terms.
 # Keys are normalized concept keywords; values are synonym lists.
 SYNONYM_MAP: dict[str, list[str]] = {
-    # Resource Sharing / ILL
+
+    # ── Generational / Student Demographics ───────────────────────────────
+    "millennial"         : ["millennial", "millennials", "Generation Y", "Gen Y",
+                            "digital native", "digital natives", "Net Generation"],
+    "generation y"       : ["Generation Y", "Gen Y", "millennial", "millennials",
+                            "digital native", "Net Generation"],
+    "generation z"       : ["Generation Z", "Gen Z", "iGeneration",
+                            "post-millennial", "centennial"],
+
+    # ── Pedagogy / Instruction ────────────────────────────────────────────
+    # "addressing" catches action verbs like "addressing the millennial student"
+    "addressing"         : ["pedagogy", "teaching strategies", "instructional strategies",
+                            "student engagement", "curriculum", "active learning"],
+    "pedagogy"           : ["pedagogy", "teaching", "instruction", "instructional strategies",
+                            "teaching strategies", "learning styles", "active learning",
+                            "student engagement", "flipped classroom",
+                            "student-centered learning", "technology-enhanced learning"],
+    "teaching"           : ["teaching", "pedagogy", "instruction", "instructional strategies",
+                            "teaching strategies", "learning styles", "active learning",
+                            "student engagement", "curriculum design"],
+    "active learning"    : ["active learning", "flipped classroom", "problem-based learning",
+                            "inquiry-based learning", "collaborative learning",
+                            "peer learning", "student-centered learning"],
+    "learning styles"    : ["learning styles", "learning preferences", "learning approaches",
+                            "student learning", "academic achievement"],
+    "engagement"         : ["student engagement", "active learning", "participation",
+                            "motivation", "retention", "persistence"],
+
+    # ── Educational Levels ────────────────────────────────────────────────
+    "undergraduate"      : ["undergraduate", "higher education", "post-secondary",
+                            "college", "university", "introductory course",
+                            "general chemistry", "introductory chemistry"],
+    "higher education"   : ["higher education", "undergraduate", "post-secondary",
+                            "college education", "university education", "tertiary education"],
+    "graduate"           : ["graduate", "postgraduate", "doctoral", "master's",
+                            "PhD", "advanced degree"],
+
+    # ── STEM / Science Disciplines ────────────────────────────────────────
+    "chemistry"          : ["chemistry", "chemical education", "chemistry education",
+                            "STEM education", "science education",
+                            "organic chemistry", "general chemistry"],
+    "stem"               : ["STEM", "STEM education", "science education",
+                            "mathematics education", "engineering education",
+                            "technology education"],
+    "biology"            : ["biology", "biological sciences", "life sciences",
+                            "STEM education", "science education"],
+    "physics"            : ["physics", "physical sciences", "STEM education",
+                            "science education"],
+    "mathematics"        : ["mathematics", "math", "calculus", "statistics",
+                            "quantitative reasoning", "STEM education"],
+
+    # ── Resource Sharing / ILL ────────────────────────────────────────────
     "interlibrary loan"  : ["interlibrary loan", "ILL", "resource sharing", "document delivery"],
     "resource sharing"   : ["resource sharing", "interlibrary loan", "ILL", "document delivery"],
     "document delivery"  : ["document delivery", "interlibrary loan", "ILL"],
 
-    # Discovery Systems
+    # ── Discovery Systems ─────────────────────────────────────────────────
     "discovery"          : ["discovery systems", "discovery layer", "web-scale discovery",
-                             "Primo", "Summon", "EBSCO Discovery Service"],
+                            "Primo", "Summon", "EBSCO Discovery Service"],
     "discovery systems"  : ["discovery systems", "discovery layer", "web-scale discovery"],
 
-    # Library Management
+    # ── Library Management ────────────────────────────────────────────────
     "alma"               : ["Alma", "Ex Libris Alma", "library management system", "LMS", "ILS"],
     "analytics"          : ["analytics", "metrics", "reporting", "data analysis", "dashboard"],
     "access services"    : ["access services", "circulation", "reserves", "course reserves"],
 
-    # Copyright / Scholarly Communication
+    # ── Copyright / Scholarly Communication ──────────────────────────────
     "copyright"          : ["copyright", "intellectual property", "copyright law"],
     "fair use"           : ["fair use", "fair dealing", "copyright exemption"],
 
-    # Academic Library Types
+    # ── Academic Library Types ────────────────────────────────────────────
     "academic library"   : ["academic library", "university library", "college library",
-                             "research library"],
+                            "research library"],
     "community college"  : ["community college", "two-year college", "junior college",
-                             "community college library"],
+                            "community college library"],
 
-    # Outcomes / Impact
+    # ── Outcomes / Impact ─────────────────────────────────────────────────
     "impact"             : ["impact", "effect", "outcome", "influence"],
     "trend"              : ["trend", "trends", "pattern", "change over time"],
     "efficiency"         : ["efficiency", "effectiveness", "performance", "workflow"],
 }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SYNONYM MAP PERSISTENCE
+# Custom entries live in synonym_map_custom.json alongside this file so they
+# survive restarts without touching the source code.
+# ══════════════════════════════════════════════════════════════════════════════
+
+_CUSTOM_MAP_PATH = Path(__file__).parent / "synonym_map_custom.json"
+
+_STOP_WORDS: frozenset[str] = frozenset({
+    "a","an","the","and","but","or","nor","so","yet","as","in","on","at","by",
+    "for","with","about","of","to","from","into","through","during","before",
+    "after","between","among","is","are","was","were","be","been","being",
+    "have","has","had","do","does","did","will","would","could","should","may",
+    "might","shall","can","this","that","these","those","it","its","he","she",
+    "they","we","i","you","me","him","her","us","them","my","your","his","our",
+    "their","what","which","who","how","when","where","why","not","no","more",
+    "most","some","any","all","both","each","every","few","such","than","too",
+    "very","just","also","then","there","here","other","own","same","new",
+    "s","use","using","used","make","making","made","based","related","using",
+})
+
+
+def _load_custom_map() -> dict[str, list[str]]:
+    if _CUSTOM_MAP_PATH.exists():
+        try:
+            return json.loads(_CUSTOM_MAP_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def _merge_custom_map() -> None:
+    """Merge persisted custom entries into the live SYNONYM_MAP."""
+    SYNONYM_MAP.update(_load_custom_map())
+
+
+def update_synonym_map(key: str, synonyms: list[str]) -> None:
+    """
+    Add or overwrite an entry in both the live SYNONYM_MAP and the
+    persisted synonym_map_custom.json file.
+    """
+    key = key.lower().strip()
+    SYNONYM_MAP[key] = synonyms
+    custom = _load_custom_map()
+    custom[key] = synonyms
+    _CUSTOM_MAP_PATH.write_text(
+        json.dumps(custom, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def get_unmapped_words(phrase: str) -> list[str]:
+    """
+    Return meaningful words from phrase that do not already match any
+    SYNONYM_MAP key (after stop-word filtering and short-word pruning).
+    """
+    words = re.sub(r"[^\w\s]", " ", phrase.lower()).split()
+    seen: set[str] = set()
+    unmapped: list[str] = []
+
+    for word in words:
+        if word in seen or word in _STOP_WORDS or len(word) <= 2:
+            continue
+        seen.add(word)
+        # Already covered if any map key contains this word or vice-versa
+        covered = any(word in key or key in word for key in SYNONYM_MAP)
+        if not covered:
+            unmapped.append(word)
+
+    return unmapped
+
+
+# Merge any previously saved custom entries on import
+_merge_custom_map()
 
 
 def extract_concepts(phrase: str) -> list[str]:
@@ -154,22 +281,14 @@ def build_primo_query(concepts: list[str], raw_phrase: str = "") -> str:
     """
     Build a correctly structured Primo VE REST API `q` parameter.
 
-    WHY one-term-per-concept:
-    Primo's q= format is a flat pipe-delimited list:
-        field,precision,value,OPERATOR|field,precision,value,...
-
-    Mixing OR and AND in this flat list breaks boolean grouping because
-    standard boolean precedence (AND binds before OR) mis-parses:
-        A,OR|B,OR|C,AND|D,OR|E
-    as  A OR B OR (C AND D) OR E
-    instead of the intended  (A OR B OR C) AND (D OR E).
-
-    Since Primo does not support parentheses in q=, the safe solution is to
-    use ONE primary term per concept joined strictly by AND.  Synonym
-    expansion remains in the human-readable boolean string shown in the UI.
+    This CUNY Primo VE instance does not honour the pipe-delimited AND format
+    (field,contains,A,AND|field,contains,B → 0 results in testing).  The
+    reliable equivalent is a single `any,contains` segment whose value is the
+    canonical terms space-joined — Primo treats space-separated tokens as
+    implicit AND, matching all terms across any indexed field.
 
     Format:
-        any,contains,<primary_term_1>,AND|any,contains,<primary_term_2>,...
+        any,contains,<term1> <term2> <term3>
 
     Fallback (no concepts matched):
         any,contains,<raw phrase>
@@ -178,17 +297,9 @@ def build_primo_query(concepts: list[str], raw_phrase: str = "") -> str:
         safe = raw_phrase.replace('"', '').strip()
         return f"any,contains,{safe}"
 
-    segments: list[str] = []
-    for i, concept in enumerate(concepts):
-        # Use the first (most canonical) synonym as the search term
-        primary = SYNONYM_MAP.get(concept, [concept])[0].strip('"')
-        is_last = (i == len(concepts) - 1)
-        if is_last:
-            segments.append(f"any,contains,{primary}")
-        else:
-            segments.append(f"any,contains,{primary},AND")
-
-    return "|".join(segments)
+    # Use the first (most canonical) synonym from each concept group
+    primaries = [SYNONYM_MAP.get(c, [c])[0].strip('"') for c in concepts]
+    return f"any,contains,{' '.join(primaries)}"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
