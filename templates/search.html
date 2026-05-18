@@ -226,47 +226,18 @@
     #results-list { display: flex; flex-direction: column; gap: 12px; }
 
     /* Clickable card wrapper */
-    .result-card-link {
-      display: block;
-      text-decoration: none;
-      color: inherit;
-      border-radius: var(--radius);
-    }
-    .result-card-link:focus-visible {
-      outline: 3px solid var(--bcc-blue);
-      outline-offset: 2px;
-    }
-
     .result-card {
       background: var(--bcc-white);
       border: 1px solid var(--bcc-border);
       border-radius: var(--radius);
       padding: 18px 20px;
       box-shadow: var(--shadow);
-      transition: box-shadow 0.18s, border-color 0.18s, transform 0.12s;
+      transition: box-shadow 0.18s, border-color 0.18s;
       position: relative;
     }
-    .result-card-link:hover .result-card,
-    .result-card-link:focus-visible .result-card {
+    .result-card:hover {
       box-shadow: var(--shadow-lg);
       border-color: var(--bcc-light);
-      transform: translateY(-1px);
-    }
-
-    /* "opens in new tab" indicator that appears on hover */
-    .result-card::after {
-      content: "";
-      display: none;
-    }
-    .result-card-link[href]:hover .result-card::before {
-      content: "Open in catalog ↗";
-      position: absolute;
-      top: 12px; right: 14px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--bcc-blue);
-      opacity: 0.75;
-      pointer-events: none;
     }
 
     .result-card .card-title {
@@ -274,13 +245,22 @@
       font-weight: 700;
       margin-bottom: 6px;
       line-height: 1.4;
-      padding-right: 100px; /* room for hover label */
     }
-    /* Title stays navy — the whole card is the link now */
-    .result-card .card-title a,
-    .result-card .card-title span {
+    .result-card .card-title a {
       color: var(--bcc-navy);
       text-decoration: none;
+    }
+    .result-card .card-title a:hover {
+      text-decoration: underline;
+      color: var(--bcc-blue);
+    }
+    .result-card .card-title a:focus-visible {
+      outline: 3px solid var(--bcc-blue);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+    .result-card .card-title span {
+      color: var(--bcc-navy);
     }
 
     .card-meta {
@@ -319,7 +299,7 @@
       gap: 10px;
     }
 
-    /* Primary "View in catalog" CTA button */
+    /* Primary "View full record in Primo" CTA button */
     .view-btn {
       display: inline-flex;
       align-items: center;
@@ -432,8 +412,6 @@
       .search-row { flex-direction: column; }
       #searchBtn { justify-content: center; }
       /* boolean panel already hidden by default on mobile */
-      /* No room for hover overlay label on mobile */
-      .result-card-link[href]:hover .result-card::before { display: none; }
       .result-card .card-title { padding-right: 0; }
     }
   </style>
@@ -699,24 +677,29 @@
 
     data.results.forEach((rec) => {
       const hasLink = Boolean(rec.link);
-      const safeLink = hasLink ? escHtml(rec.link) : "#";
+      const safeLink = hasLink ? escHtml(rec.link) : null;
 
       const typeBadge = rec.type
         ? `<span class="type-badge">${escHtml(typeLabel(rec.type))}</span>`
         : "";
 
+      const titleHtml = hasLink
+        ? `<a href="${safeLink}" target="_blank" rel="noopener noreferrer"
+              aria-label="View full record for: ${escHtml(rec.title)}">${escHtml(rec.title)}</a>`
+        : `<span>${escHtml(rec.title)}</span>`;
+
       const footerHtml = hasLink
         ? `<div class="card-footer">
-             <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="view-btn"
-                tabindex="-1" aria-hidden="true">
-               View in catalog ${extIcon}
+             <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="view-btn">
+               View full record in Primo ${extIcon}
              </a>
            </div>`
         : "";
 
-      // Inner card content
-      const cardHtml = `
-        <div class="card-title"><span>${escHtml(rec.title)}</span></div>
+      const card = document.createElement("div");
+      card.className = "result-card";
+      card.innerHTML = `
+        <div class="card-title">${titleHtml}</div>
         <div class="card-meta">
           ${rec.creator ? `<span class="meta-chip">👤 <strong>${escHtml(rec.creator)}</strong></span>` : ""}
           ${rec.date    ? `<span class="meta-chip">📅 <strong>${escHtml(rec.date)}</strong></span>`    : ""}
@@ -725,27 +708,7 @@
         </div>
         ${footerHtml}
       `;
-
-      if (hasLink) {
-        // Whole card is a link
-        const wrapper = document.createElement("a");
-        wrapper.className = "result-card-link";
-        wrapper.href = rec.link;
-        wrapper.target = "_blank";
-        wrapper.rel = "noopener noreferrer";
-        wrapper.setAttribute("aria-label", `${rec.title} — open in catalog`);
-        const card = document.createElement("div");
-        card.className = "result-card";
-        card.innerHTML = cardHtml;
-        wrapper.appendChild(card);
-        list.appendChild(wrapper);
-      } else {
-        // No link — plain div
-        const card = document.createElement("div");
-        card.className = "result-card";
-        card.innerHTML = cardHtml;
-        list.appendChild(card);
-      }
+      list.appendChild(card);
     });
   }
 
